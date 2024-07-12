@@ -181,13 +181,13 @@ class Muifabrica_Integration
     public function add_actions() : void
     {
 		// TODO rever inicialização da REST API
-		// add_action( "init",                        [ $this, "load_rest_api"             ]     );
-        add_action( "init",                         [ $this, "add_custom_order_status"    ]     );
+		// add_action( "init",                        [ $this, "load_rest_api"            ]     );
+        add_action( "init",                         [ $this, "add_custom_order_status" ]     );
 
-		add_action( "admin_menu",                   [ $this, "add_admin_menu"             ], 9  );
-        add_action( "admin_enqueue_scripts",        [ $this, "add_admin_style_script"     ]     );
+		add_action( "admin_menu",                   [ $this, "add_admin_menu"          ], 9  );
+        add_action( "admin_enqueue_scripts",        [ $this, "add_admin_style_script"  ]     );
 
-		add_action( "admin_post_mfi_save_settings", [ $this, "save_settings_tab_settings" ]     );
+		add_action( "admin_post_mfi_save_settings", [ $this, "save_settings_tab"       ]     );
     }
 
 	/**
@@ -228,6 +228,8 @@ class Muifabrica_Integration
 		// new Muifabrica_Integration\Classes\DSM_Products();
 		// new Muifabrica_Integration\Classes\DSM_Tags();
 		// new Muifabrica_Integration\Classes\DSM_Users();
+
+		require_once( self::DIR . "/includes/api/class-muifabrica-api.php" );
 	}
 
 	/**
@@ -267,7 +269,8 @@ class Muifabrica_Integration
      */
     public function add_admin_style_script() : void
     {
-		$suffix   = defined( "SCRIPT_DEBUG" ) && SCRIPT_DEBUG ? "" : ".min";
+		$suffix   = ( defined( "SCRIPT_DEBUG" ) && SCRIPT_DEBUG ) ? "" : ".min";
+
 		$css_path = "assets/css/style{$suffix}.css";
 		$css_ver  = date( "ymdHis", filemtime( plugin_dir_path( self::FILE ) . $css_path ) );
 		wp_enqueue_style( "mfi_css_js", plugins_url( $css_path, self::FILE ), false, $css_ver, "all" );
@@ -323,7 +326,7 @@ class Muifabrica_Integration
 			self::DOMAIN,
 			[ $this, "display_admin_menu" ],
 			plugins_url( "assets/images/mfi-menu.png", self::FILE ),
-            65
+            55.1
 		);
 	}
 
@@ -460,7 +463,7 @@ class Muifabrica_Integration
 	 * @since 	1.0.0
 	 * @return 	void
 	 */
-	public static function save_settings_tab_settings() : void
+	public static function save_settings_tab() : void
 	{
         if ( isset( $_POST[ "_wpnonce" ] ) && !empty( $_POST[ "_wpnonce" ] ) )
         {
@@ -470,30 +473,39 @@ class Muifabrica_Integration
 				wp_die( "Nope! Security check failed!" );
         }
 
-		// Update DSM email settings
-		if ( isset( $_POST[ "mfi_email_settings" ] ) && !empty( $_POST[ "mfi_email_settings" ] ) )
-			update_option( "_mfi_email_settings", $_POST[ "mfi_email_settings" ] );
+		// env
+		$env   = ( isset( $_POST[ "mfi_env_api" ] ) && $_POST[ "mfi_env_api" ] === "on" ) ? "hml" : "prd";
+		// debug
+		$debug = ( isset( $_POST[ "mfi_debug"   ] ) && $_POST[ "mfi_debug"   ] === "on" ) ? true  : false;
 
-		// Update DSM categories settings
-		if ( isset( $_POST[ "mfi_categories_settings" ] ) && $_POST[ "mfi_categories_settings" ] === "on" )
-			update_option( "_mfi_categories_settings", true );
-		elseif ( !isset( $_POST[ "mfi_categories_settings" ] ) )
-			update_option( "_mfi_categories_settings", false );
+		update_option( "_mfi_env_api", $env   );
+		update_option( "_mfi_debug",   $debug );
 
-		// Update DSM debug settings
-		if ( isset( $_POST[ "mfi_debug_settings" ] ) && $_POST[ "mfi_debug_settings" ] === "on" )
-			update_option( "_mfi_debug", true );
-		elseif ( !isset( $_POST[ "mfi_debug_settings" ] ) )
-			update_option( "_mfi_debug", false );
+		// app id hml
+		if ( isset( $_POST[ "mfi_app_id_hml" ] ) && !empty( $_POST[ "mfi_app_id_hml" ] ) )
+			update_option( "_mfi_app_id_hml", $_POST[ "mfi_app_id_hml" ] );
+
+		// app secret hml
+		if ( isset( $_POST[ "mfi_app_secret_hml" ] ) && !empty( $_POST[ "mfi_app_secret_hml" ] ) )
+			update_option( "_mfi_app_secret_hml", $_POST[ "mfi_app_secret_hml" ] );
+
+		// app id prd
+		if ( isset( $_POST[ "mfi_app_id" ] ) && !empty( $_POST[ "mfi_app_id" ] ) )
+			update_option( "_mfi_app_id", $_POST[ "mfi_app_id" ] );
+
+		// app secret prd
+		if ( isset( $_POST[ "mfi_app_secret" ] ) && !empty( $_POST[ "mfi_app_secret" ] ) )
+			update_option( "_mfi_app_secret", $_POST[ "mfi_app_secret" ] );
 
 		$url = "page=" . self::DOMAIN;
 
 		if ( isset( $_POST[ "_wp_http_referer" ] ) && !empty( $_POST[ "_wp_http_referer" ] ) )
 			$url = explode( "?", $_POST[ "_wp_http_referer" ] )[ 1 ];
 
-		$url = admin_url( "admin.php?{$url}" );
+		// generate token with saved app id and secret
+		( new Muifabrica_Api() )->generate_token();
 
-		wp_redirect( $url );
+		wp_redirect( admin_url( "admin.php?{$url}" ) );
 		exit;
 	}
 
