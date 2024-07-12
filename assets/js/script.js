@@ -241,6 +241,11 @@
 		}
     }
 
+    function mfiShowLoad()
+    {
+        $( "#mfi-modal-load" ).removeClass( "mfi-d-none" );
+    }
+
 	function mfiHandleKeys()
 	{
 		let env    = $( "#mfi_env_api"        ),
@@ -275,7 +280,9 @@
         }
 	}
 
-	$( document ).on( "change", "#mfi_env_api", function() { mfiHandleKeys(); } );
+    $( document ).on( "submit", "#mfi-general-form", function() { mfiShowLoad();   } )
+	$( document ).on( "change", "#mfi_env_api",      function() { mfiHandleKeys(); } );
+
 	$( document ).ready( function() { mfiHandleKeys(); } );
 
 }( jQuery ) );

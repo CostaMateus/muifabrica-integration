@@ -62,7 +62,6 @@
     text-align: center !important;
 }
 
-.mfi-d-none { display: none !important; }
 .mfi-modal {
     top: 0;
     left: 0;
@@ -80,8 +79,9 @@
     width: 60px;
     height: 60px;
     margin: 0 auto;
-    border: 5px solid #F2F2F2;
-    border-top: 5px solid #2271B1;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #02A553 #02A553 #FEDF00 #FFF;
     border-radius: 50%;
     animation: mfi-spin 1s linear infinite;
     -webkit-animation: mfi-spin 1s linear infinite;
