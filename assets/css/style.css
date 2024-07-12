@@ -168,10 +168,14 @@
     line-height: 1.3;
     vertical-align: middle;
 }
-.mfi-form .form-table td input[type=email],
+.mfi-form .form-table td input[type=password],
 .mfi-form .form-table td input[type=text],
 .mfi-form .form-table td .description {
-    width: 500px;
+    width: 400px;
+}
+
+.mfi-form .form-table .mfi-descr {
+    margin-top: -5px;
 }
 
 .mfi-my-5 {
@@ -333,4 +337,19 @@ table.wp-list-table span.wc-image::before {
 }
 .mfi-orders-tags-supplier li .save-tag-supplier {
     float: right;
+}
+
+#mfi-general-form .button.wp-hide-pw {
+    border: 1px solid transparent;
+    font-size: 14px;
+    box-shadow: none;
+    background: transparent;
+    line-height: 2;
+    left: -2.8rem;
+    margin: 0;
+    padding: 4px 9px;
+    position: relative;
+}
+#mfi-general-form .button.wp-hide-pw .dashicons {
+    top: -.025rem;
 }

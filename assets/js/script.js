@@ -223,9 +223,27 @@
 
 
 
-	function handleKeys()
+	window.mfiShowPassword = function( e )
 	{
-		let env    = $( "#mfi_api"            ),
+		let el = $( `#${e.id}` );
+
+		if ( el.children().attr( "class" ) == "dashicons dashicons-visibility" )
+		{
+			el.children().removeClass( "dashicons-visibility" );
+			el.children().addClass( "dashicons-hidden" );
+			el.prev().attr( "type", "text" );
+		}
+		else
+		{
+			el.children().removeClass( "dashicons-hidden" );
+			el.children().addClass( "dashicons-visibility" );
+			el.prev().attr( "type", "password" );
+		}
+    }
+
+	function mfiHandleKeys()
+	{
+		let env    = $( "#mfi_env_api"        ),
 		    ai_hml = $( "#mfi_app_id_hml"     ),
 			as_hml = $( "#mfi_app_secret_hml" ),
 			ai_prd = $( "#mfi_app_id"         ),
@@ -235,11 +253,11 @@
         {
             ai_hml.closest( "tr" ).show();
             as_hml.closest( "tr" ).show();
-            ai_prd.closest( "tr" ).hide();
-            as_prd.closest( "tr" ).hide();
-
             ai_hml.prop( "required", true );
             as_hml.prop( "required", true );
+
+            ai_prd.closest( "tr" ).hide();
+            as_prd.closest( "tr" ).hide();
             ai_prd.removeAttr( "required" );
             as_prd.removeAttr( "required" );
         }
@@ -247,17 +265,17 @@
         {
             ai_hml.closest( "tr" ).hide();
             as_hml.closest( "tr" ).hide();
-            ai_prd.closest( "tr" ).show();
-            as_prd.closest( "tr" ).show();
-
             ai_hml.removeAttr( "required" );
             as_hml.removeAttr( "required" );
+
+            ai_prd.closest( "tr" ).show();
+            as_prd.closest( "tr" ).show();
             ai_prd.prop( "required", true );
             as_prd.prop( "required", true );
         }
 	}
 
-	$( document ).on( "change", "#mfi_api", function() { handleKeys(); } );
-	$( document ).ready(                    function() { handleKeys(); } );
+	$( document ).on( "change", "#mfi_env_api", function() { mfiHandleKeys(); } );
+	$( document ).ready( function() { mfiHandleKeys(); } );
 
 }( jQuery ) );
