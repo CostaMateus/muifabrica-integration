@@ -341,10 +341,10 @@ class Muifabrica_Integration
 		if ( !current_user_can( "manage_options" ) ) wp_die( __( "Você não tem permissões suficientes para acessar essa página." ) );
 
 		$tabs = [
-			"settings" => __( "Configurações",  "muifabrica_integration" ), // antigo 'general'
-			"preview"  => __( "Não importados", "muifabrica_integration" ),
-			"products" => __( "Produtos",       "muifabrica_integration" ),
-			"orders"   => __( "Pedidos",        "muifabrica_integration" ),
+			"settings" => __( "Configurações",           "muifabrica_integration" ),
+			"preview"  => __( "Produtos não importados", "muifabrica_integration" ),
+			"products" => __( "Produtos importados",     "muifabrica_integration" ),
+			"orders"   => __( "Pedidos",                 "muifabrica_integration" ),
 		];
 
 		$tab  = isset( $_GET[ "tab" ] ) ? $_GET[ "tab" ] : "settings";
