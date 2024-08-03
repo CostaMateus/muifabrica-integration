@@ -75,14 +75,13 @@ class Muifabrica_Api
 				"details"      => "order",          // GET
 			],
 			"product"        => [
-				"list"         => "product/list",   // GET
-				"details"      => "product",        // GET
+				"list"         => "product/list",   // GET, ?cate_id={category_id}
+				"details"      => "product",        // GET, /{product_id}
 			],
         ];
     }
 
     /**
-     * Log data.
      * Logs data with appropriate log level.
      *
      * @since 	1.0.0
@@ -91,7 +90,7 @@ class Muifabrica_Api
      * @param 	bool 	$is_error 	Whether the log is an error.
      * @return 	void
      */
-	private function log( string $type, array $data, bool $is_error = false )
+	private function log( string $type, array $data, bool $is_error = false ) : void
 	{
 		// Get instance of Nickelpay
 		$mfi = Muifabrica_Integration::init();
@@ -100,20 +99,89 @@ class Muifabrica_Api
 		$mfi->log( $type, wc_print_r( $data, true ), $is_error );
 	}
 
+    /**
+     * Get base URL based on environment.
+	 *
+	 * @since 	1.0.0
+	 * @return 	string
+     */
+    private function get_base_url() : string
+    {
+        return ( $this->env != "prd" ) ? self::U_HML : self::U_PRD;
+    }
+
+    /**
+     * Get app credentials based on environment.
+	 *
+	 * @since 	1.0.0
+	 * @return 	array
+     */
+    private function get_app_credentials() : array
+    {
+        $app_id = ( $this->env != "prd" ) ? get_option( "_mfi_app_id_hml"     ) : get_option( "_mfi_app_id"     );
+        $app_sc = ( $this->env != "prd" ) ? get_option( "_mfi_app_secret_hml" ) : get_option( "_mfi_app_secret" );
+
+        return [ $app_id, $app_sc ];
+    }
+
+    /**
+     * Handle API response and errors.
+	 *
+	 * @since 	1.0.0
+	 * @param 	array|WP_Error 	$name
+	 * @param 	string 			$url
+	 * @param 	array 			$params
+	 * @param 	string 			$function_name
+	 * @return 	array
+     */
+    private function handle_api_response( array|WP_Error $response, string $url, array $params, string $function_name ) : array
+    {
+        if ( is_wp_error( $response ) )
+        {
+            $this->log( "error", [
+                "success"  => 0,
+                "function" => $function_name,
+                "code"     => 500,
+                "message"  => $response->get_error_message(),
+                "url"      => $url,
+                "args"     => $params,
+                "response" => $response,
+            ], true );
+            return false;
+        }
+
+        $status        = wp_remote_retrieve_response_code( $response );
+        $response_body = json_decode( $response[ "body" ], true );
+
+        if ( $status < 200 || $status >= 300 || ( isset( $response_body[ "status" ] ) && $response_body[ "status" ] != 200 ) )
+        {
+            $this->log( "error", [
+                "success"  => 0,
+                "function" => $function_name,
+                "code"     => $status,
+                "message"  => isset( $response_body[ "msg" ] ) ? $response_body[ "msg" ] : "",
+                "url"      => $url,
+                "args"     => $params,
+                "response" => $response_body,
+            ] );
+            return false;
+        }
+
+        return $response_body;
+    }
+
 	/**
 	 * Generate token for use in Webhook API calls.
-	 * This function generates an access token for use in making API calls.
 	 *
 	 * @since 	1.0.0
 	 * @return 	bool 	True on success or false if generation fails.
 	 */
-	public function generate_token()
+	public function generate_token() : bool
 	{
-		$url    = ( $this->env != "prd" ) ? self::U_HML : self::U_PRD;
-		$url   .= "/" . $this->urls[ "access_token" ];
+        $base_url = $this->get_base_url();
+        $url      = "{$base_url}/" . $this->urls[ "access_token" ];
 
-		$app_id = ( $this->env != "prd" ) ? get_option( "_mfi_app_id_hml"     ) : get_option( "_mfi_app_id"     );
-		$app_sc = ( $this->env != "prd" ) ? get_option( "_mfi_app_secret_hml" ) : get_option( "_mfi_app_secret" );
+        list( $app_id, $app_sc ) = $this->get_app_credentials();
 
 		if ( empty( $app_id ) || empty( $app_sc ) )
 		{
@@ -124,20 +192,20 @@ class Muifabrica_Api
 				"message"  => "Missing app_id or app_secret",
 				"url"      => $url,
 				"args"     => [ $this->env, $app_id, $app_sc ],
-				"response" => $response,
+				"response" => null,
 			], true );
 
 			return false;
 		}
 
-		$params = [
+		$params   = [
 			"app_id"  => $app_id,
 			"app_key" => $app_sc,
 		];
 
-		$url    = add_query_arg( $params, $url );
+		$url      = add_query_arg( $params, $url );
 
-		$args   = [
+		$args     = [
 			"timeout" => 60,
 			"headers" => [
 				"Content-Type" => "application/json",
@@ -147,27 +215,30 @@ class Muifabrica_Api
 		try
 		{
 			// Make API call
-			$response = wp_remote_post( $url, $args );
+			$response      = wp_remote_post( $url, $args );
 
-			// Handle processing result
-			if ( is_wp_error( $response ) )
-			{
-				// WP error
-				$this->log( "error", [
-					"success"  => 0, // false
-					"function" => "generate_token",
-					"code"     => 500,
-					"message"  => $response->get_error_message(),
-					"url"      => $url,
-					"args"     => array_merge( $args, $params ),
-					"response" => $response,
-				], true );
+			$params        = array_merge( $args, $params );
 
+            $response_body = $this->handle_api_response( $response, $url, $params, "generate_token" );
+
+            if ( !$response_body )
 				return false;
-			}
 
-			$status   = wp_remote_retrieve_response_code( $response );
-			$response = json_decode( $response[ "body" ], true );
+			// Set the access token for API authentication
+			set_transient( "_mfi_access_token", $response_body[ "data" ][ "token" ], DAY_IN_SECONDS );
+
+			// Log if debug enabled
+			$this->log( "info", [
+				"success"  => 1, // true
+				"function" => "generate_token",
+				"code"     => $status,
+				"message"  => "Success",
+				"url"      => $url,
+				"args"     => $params,
+				"response" => $response_body,
+			] );
+
+			return true;
 		}
 		catch ( Exception $e )
 		{
@@ -183,630 +254,277 @@ class Muifabrica_Api
 
 			return false;
 		}
+	}
 
-		// API error
-		if ( $status < 200 || $status >= 300 || ( isset( $response[ "status" ] ) && $response[ "status" ] != 200 ) )
+	/**
+     * Get access token, generating a new one if necessary.
+	 *
+	 * @since 	1.0.0
+	 * @return 	string|false
+	 */
+	public function get_token() : string|false
+	{
+		$token = get_transient( "_mfi_access_token" );
+
+		if ( $token === false )
+		{
+			if ( !$this->generate_token() )
+				return false;
+
+			$token = get_transient( "_mfi_access_token" );
+		}
+
+		return $token;
+	}
+
+	/**
+     * Get categories from API.
+	 *
+	 * @since 	1.0.0
+	 * @return 	array|false
+	 */
+	public function get_categories() : array|false
+	{
+        $base_url = $this->get_base_url();
+        $url      = "{$base_url}/" . $this->urls[ "category" ];
+
+        list( $app_id, $app_sc ) = $this->get_app_credentials();
+
+		if ( empty( $app_id ) || empty( $app_sc ) )
 		{
 			$this->log( "error", [
 				"success"  => 0, // false
-				"function" => "generate_token",
-				"code"     => $status,
-				"message"  => ( isset( $response[ "msg" ] ) ) ? $response[ "msg" ] : "",
+				"function" => "get_categories",
+				"code"     => 500,
+				"message"  => "Missing app_id or app_secret",
 				"url"      => $url,
-				"args"     => array_merge( $args, $params ),
-				"response" => $response,
-			] );
+				"args"     => [ $this->env, $app_id, $app_sc ],
+				"response" => null,
+			], true );
 
 			return false;
 		}
 
-		// Log if debug enabled
-		$this->log( "info", [
-			"success"  => 1, // true
-			"function" => "generate_token",
-			"code"     => $status,
-			"message"  => "Success",
-			"url"      => $url,
-			"args"     => array_merge( $args, $params ),
-			"response" => $response,
-		] );
+		$token    = $this->get_token();
 
-		// Returns an access token for API authentication
-		set_transient( "_mfi_access_token", $response[ "data" ][ "token" ], DAY_IN_SECONDS );
+		if ( $token === false )
+			return false;
 
-		return true;
+		$args     = [
+			"timeout" => 60,
+			"headers" => [
+				"Content-Type"   => "application/json",
+				"Authori-key"    => $app_sc,
+				"Authori-zation" => "Beare {$token}",
+			],
+		];
+
+        try
+        {
+            $response      = wp_remote_get( $url, $args );
+
+            $response_body = $this->handle_api_response( $response, $url, $args, "get_categories" );
+
+            if ( !$response_body )
+				return false;
+
+            return $response_body[ "data" ][ "list" ];
+        }
+        catch ( Exception $e )
+        {
+            $this->log( "critical", [
+                "success"  => 0,
+                "function" => "get_categories",
+                "code"     => 500,
+                "message"  => $e->getMessage(),
+                "url"      => $url,
+                "args"     => $args,
+                "response" => null,
+            ], true );
+
+            return false;
+        }
 	}
 
-	// /**
-	//  * Prepare webhook args
-	//  *
-	//  * @since 	1.4.0
-	//  * @param 	array 	$data
-	//  * @param 	bool 	$unregister
-	//  * @return 	array
-	//  */
-	// private function prepara_args_webhook( array $data, bool $unregister = false )
-	// {
-	// 	$return = [
-	// 		"data_format" => "body",
-	// 		"timeout"     => 60,
-	// 		"method"      => "",
-	// 		"headers"     => [
-	// 			"Content-Type"  => "application/json",
-	// 			"Authorization" => "Bearer {$data[ "token" ]}",
-	// 		],
-	// 	];
-
-	// 	if ( !$unregister )
-	// 	{
-	// 		$return[ "body" ] = wp_json_encode( [
-	// 			"url"              => $data[ "url"     ],
-	// 			"transaction_type" => $data[ "type"    ],
-	// 			"login"            => $data[ "account" ][ "login"    ],
-	// 			"password"         => $data[ "account" ][ "password" ]
-	// 		] );
-	// 	}
-
-	// 	return $return;
-	// }
-
-	// /**
-	//  * Call external API webhooks.
-	//  *
-	//  * @since 	1.4.0
-	//  * @param 	array 	$args 	The request data.
-	//  * @param 	array 	$url 	The request url.
-	//  * @return 	int
-	//  */
-	// private function call_webook( array $args, string $url )
-	// {
-	// 	try
-	// 	{
-	// 		// Make API call
-	// 		$response = wp_remote_request( $url, $args );
-
-	// 		// Handle processing result
-	// 		if ( is_wp_error( $response ) )
-	// 		{
-	// 			// WP error
-	// 			$this->log( "error", [
-	// 				"success"  => false,
-	// 				"function" => "set_webhook",
-	// 				"code"     => 500,
-	// 				"type"     => $data[ "type" ],
-	// 				"wp_error" => $response->get_error_message(),
-	// 				"url"      => $url,
-	// 				"args"     => $args,
-	// 				"response" => $response,
-	// 			], true );
-
-	// 			return 0;
-	// 		}
-
-	// 		$status   = wp_remote_retrieve_response_code( $response );
-	// 		$response = json_decode( $response[ "body" ], true );
-	// 	}
-	// 	catch ( Exception $e )
-	// 	{
-	// 		$this->log( "critical", [
-	// 			"success"   => false,
-	// 			"function"  => "generate_token",
-	// 			"code"      => $status,
-	// 			"exception" => $e->getMessage(),
-	// 			"url"       => $url,
-	// 			"args"      => $args,
-	// 			"response"  => $response,
-	// 		], true );
-
-	// 		return 0;
-	// 	}
-
-	// 	// API error
-	// 	if ( $status < 200 || $status >= 300 )
-	// 	{
-	// 		$this->log( "warning", [
-	// 			"success"  => false,
-	// 			"function" => "set_webhook",
-	// 			"code"     => $status,
-	// 			"type"     => $data[ "type" ],
-	// 			"error"    => $response[ "message" ],
-	// 			"url"      => $url,
-	// 			"args"     => $args,
-	// 			"response" => $response,
-	// 		] );
-
-	// 		return 1;
-	// 	}
-
-	// 	// Log if debug enabled
-	// 	$this->log( "info", [
-	// 		"success"  => true,
-	// 		"function" => "set_webhook",
-	// 		"code"     => $status,
-	// 		"type"     => $data[ "type" ],
-	// 		"url"      => $url,
-	// 		"args"     => $args,
-	// 		"response" => $response,
-	// 	] );
-
-	// 	return 2;
-	// }
-
-	// /**
-	//  * Register webhooks for receiving notifications.
-	//  *
-	//  * @since 	1.4.0
-	//  * @param 	array 	$data 	The webhook data.
-	//  * @return 	int
-	//  */
-	// private function create_webhook( array $data )
-	// {
-	// 	$url              = $this->urls[ "webhook" ];
-	// 	$args             = $this->prepara_args_webhook( $data );
-	// 	$args[ "method" ] = "POST";
-
-	// 	return $this->call_webook( $args, $url );
-	// }
-
-	// /**
-	//  * Deletes registred webhooks for receiving notifications.
-	//  *
-	//  * @since 	1.4.0
-	//  * @param 	array 	$data 	The webhook data.
-	//  * @return 	int
-	//  */
-	// private function delete_webhook( array $data )
-	// {
-	// 	$url              = $this->urls[ "webhook" ] . "/" . $data[ "type" ];
-	// 	$args             = $this->prepara_args_webhook( $data, true );
-	// 	$args[ "method" ] = "DELETE";
-
-	// 	return $this->call_webook( $args, $url );
-	// }
-
-	// /**
-	//  * Get customer account ID.
-	//  *
-	//  * @since 	1.0.0
-	//  * @param 	array 	$account 	The account credentials.
-	//  * @return 	string|null 		The customer account ID or null if retrieval fails.
-	//  */
-	// private function get_account( array $account )
-	// {
-	// 	$try   = 0;
-	// 	$token = null;
-
-	// 	do
-	// 	{
-	// 		// Retrieve token
-	// 		$token = $this->generate_token( $account );
-	// 		$try++;
-	// 	}
-	// 	while ( !$token && $try < 3 );
-
-	// 	if ( !$token )
-	// 		return null;
-
-	// 	// Prepare data
-	// 	$args  = [
-	// 		"timeout" => 60,
-	// 		"headers" => [
-	// 			"Content-Type"  => "application/json",
-	// 			"Authorization" => "Bearer {$token}",
-	// 		],
-	// 	];
-
-	// 	try
-	// 	{
-	// 		// Make API call
-	// 		$response = wp_remote_get( $this->urls[ "customer" ], $args );
-
-	// 		// Handle processing result
-	// 		if ( is_wp_error( $response ) )
-	// 		{
-	// 			// WP error
-	// 			$this->log( "error", [
-	// 				"success"  => false,
-	// 				"function" => "get_account",
-	// 				"code"     => 500,
-	// 				"error"    => "Get account_id method failure - EC:101",
-	// 				"wp_error" => $response->get_error_message(),
-	// 				"url"      => $url,
-	// 				"args"     => $args,
-	// 				"response" => $response,
-	// 			], true );
-
-	// 			return null;
-	// 		}
-
-	// 		$status   = wp_remote_retrieve_response_code( $response );
-	// 		$response = json_decode( $response[ "body" ], true );
-	// 	}
-	// 	catch ( Exception $e )
-	// 	{
-	// 		$this->log( "critical", [
-	// 			"success"   => false,
-	// 			"function"  => "get_account",
-	// 			"code"      => $status,
-	// 			"exception" => $e->getMessage(),
-	// 			"url"       => $url,
-	// 			"args"      => $args,
-	// 			"response"  => $response,
-	// 		], true );
-
-	// 		return null;
-	// 	}
-
-	// 	// API error
-	// 	if ( $status < 200 || $status >= 300 )
-	// 	{
-	// 		$this->log( "warning", [
-	// 			"success"  => false,
-	// 			"function" => "get_account",
-	// 			"code"     => $status,
-	// 			"error"    => "Get account_id method failure - EC:102",
-	// 			"url"      => $url,
-	// 			"args"     => $args,
-	// 			"response" => $response,
-	// 		] );
-
-	// 		return null;
-	// 	}
-
-	// 	// Check if data is set
-	// 	if ( !isset( $response[ "account" ] ) || !is_array( $response[ "account" ] ) || empty( $response[ "account" ] ) )
-	// 	{
-	// 		$this->log( "warning", [
-	// 			"success"  => false,
-	// 			"function" => "get_account",
-	// 			"code"     => $status,
-	// 			"error"    => "Get account_id method failure - EC:103",
-	// 			"url"      => $url,
-	// 			"args"     => $args,
-	// 			"response" => $response,
-	// 		], true );
-
-	// 		return null;
-	// 	}
-
-	// 	// Log if debug enabled
-	// 	$this->log( "info", [
-	// 		"success"  => true,
-	// 		"function" => "get_account",
-	// 		"code"     => $status,
-	// 		"url"      => $url,
-	// 		"args"     => $args,
-	// 		"response" => $response,
-	// 	] );
-
-	// 	return $response[ "account" ][ 0 ][ "_id" ];
-	// }
-
-	// /**
-	//  * Set body payment to process
-	//  *
-	//  * @since 	1.0.0
-	//  * @param 	string 	$account 	The customer account ID.
-	//  * @param 	string 	$type 		The payment type.
-	//  * @param 	array 	$data 		The payment data.
-	//  * @return 	array 				The formatted payment data.
-	//  */
-	// private function set_body_payment( string $account, string $type, array $data )
-	// {
-	// 	if ( $type == "pix" )
-	// 	{
-	// 		return [
-	// 			"account_id"     => $account,
-	// 			"payer_question" => $data[ "description" ],
-	// 			"value"          => $data[ "value"       ],
-	// 			"due"            => $data[ "due_date"    ] . " 23:59:59",
-	// 		];
-	// 	}
-
-	// 	if ( $type == "billet" )
-	// 	{
-	// 		return [
-	// 			"account_id"     => $account,
-	// 			"due_date"       => $data[ "due_date"    ],
-	// 			"value"          => $data[ "value"       ],
-	// 		];
-	// 	}
-	// }
-
-	// /**
-	//  * Process payment
-	//  *
-	//  * @since 	1.0.0
-	//  * @param 	string 	$type 	The payment type.
-	//  * @param 	array 	$data 	The payment data.
-	//  * @return 	array 			The payment processing result.
-	//  */
-	// public function process_payment( string $type, array $data ): array
-	// {
-	// 	$try        = 0;
-	// 	$token      = null;
-
-	// 	$user       = ( "on" === $this->env ) ? get_option( "nickelpay_np_sb_user"       ) : get_option( "nickelpay_np_prd_user"       );
-	// 	$pass       = ( "on" === $this->env ) ? get_option( "nickelpay_np_sb_pass"       ) : get_option( "nickelpay_np_prd_pass"       );
-	// 	$account_id = ( "on" === $this->env ) ? get_option( "nickelpay_np_sb_account_id" ) : get_option( "nickelpay_np_prd_account_id" );
-
-	// 	$order_id   = $data[ "order_id" ];
-
-	// 	do
-	// 	{
-	// 		// Retrieve token
-	// 		$token = $this->generate_token( [
-	// 			"username" => $user,
-	// 			"password" => $pass,
-	// 		] );
-
-	// 		$try++;
-	// 	}
-	// 	while ( !$token && $try < 3 );
-
-	// 	// Token failed
-	// 	if ( !$token )
-	// 	{
-	// 		$this->log( "error", [
-	// 			"success"      => "false",
-	// 			"function"     => "generate_token (process_payment)",
-	// 			"code"         => 500,
-	// 			"order_id"     => "#{$order_id}",
-	// 			"payment_type" => $type,
-	// 			"error"        => "Token creation failed - EC:001",
-	// 			"url"          => null,
-	// 			"args"         => null,
-	// 			"response"     => null,
-	// 		], true );
-
-	// 		return [
-	// 			"success" => false,
-	// 			"message" => __( "Payment method failure.", "wc_nickelpay" ) . " EC:001",
-	// 			"code"    => "generate_token",
-	// 			"data"    => [],
-	// 		];
-	// 	}
-
-	// 	// Unsupported payment method
-	// 	if ( !in_array( $type, [ "pix", "billet" ] ) )
-	// 	{
-	// 		$this->log( "error", [
-	// 			"success"      => "false",
-	// 			"function"     => "unsupported_payment_method (process_payment)",
-	// 			"code"         => 500,
-	// 			"order_id"     => "#{$order_id}",
-	// 			"payment_type" => $type,
-	// 			"error"        => "Unsupported payment method - EC:002",
-	// 			"url"          => null,
-	// 			"args"         => null,
-	// 			"response"     => null,
-	// 		], true );
-
-	// 		return [
-	// 			"success" => false,
-	// 			"message" => __( "Unsupported payment method.", "wc_nickelpay" ) . " EC:002",
-	// 			"code"    => "unsupported_payment_method.",
-	// 			"data"    => [],
-	// 		];
-	// 	}
-
-	// 	// Get customer account ID, if not saved
-	// 	if ( !$account_id )
-	// 	{
-	// 		$account_id = $this->get_account( [
-	// 			"username" => $user,
-	// 			"password" => $pass,
-	// 		] );
-
-	// 		if ( !$account_id )
-	// 		{
-	// 			$this->log( "error", [
-	// 				"success"      => false,
-	// 				"function"     => "get_account (process_payment)",
-	// 				"code"         => 500,
-	// 				"order_id"     => "#{$order_id}",
-	// 				"payment_type" => $type,
-	// 				"error"        => "Invalid account_id - EC:003",
-	// 				"url"          => null,
-	// 				"args"         => null,
-	// 				"response"     => null,
-	// 			], true );
-
-	// 			return [
-	// 				"success" => false,
-	// 				"message" => __( "Payment method failure.", "wc_nickelpay" ) . " EC:003",
-	// 				"code"    => "get_account",
-	// 				"data"    => [],
-	// 			];
-	// 		}
-
-	// 		if ( "on" === $this->env )
-	// 			update_option( "nickelpay_np_sb_account_id",  $account_id );
-	// 		else
-	// 			update_option( "nickelpay_np_prd_account_id", $account_id );
-	// 	}
-
-	// 	$url        = ( $type == "pix" ) ? $this->urls[ "pix_dynamic" ] : $this->urls[ "billet" ];
-	// 	$body       = $this->set_body_payment( $account_id, $type, $data );
-
-	// 	// Prepare data
-	// 	$args       = [
-	// 		"data_format" => "body",
-	// 		"timeout"     => 60,
-	// 		"body"        => wp_json_encode( $body ),
-	// 		"headers"     => [
-	// 			"Content-Type"  => "application/json",
-	// 			"Authorization" => "Bearer {$token}",
-	// 		],
-	// 	];
-
-	// 	try
-	// 	{
-	// 		// Make API call
-	// 		$response = wp_remote_post( $url, $args );
-
-	// 		// Handle processing result
-	// 		if ( is_wp_error( $response ) )
-	// 		{
-	// 			// WP Error
-	// 			$this->log( "error", [
-	// 				"success"      => false,
-	// 				"function"     => "process_payment",
-	// 				"code"         => $status,
-	// 				"order_id"     => "#{$order_id}",
-	// 				"payment_type" => $type,
-	// 				"error"        => "Payment method failure - EC:004",
-	// 				"wp_error"     => $response->get_error_message(),
-	// 				"url"          => $url,
-	// 				"args"         => $args,
-	// 				"response"     => $response,
-	// 			], true );
-
-	// 			return [
-	// 				"success" => false,
-	// 				"message" => __( "Payment method failure.", "wc_nickelpay" ) . " EC:004",
-	// 				"code"    => "process_payment",
-	// 				"data"    => [],
-	// 			];
-	// 		}
-
-	// 		$status   = wp_remote_retrieve_response_code( $response );
-	// 		$response = json_decode( $response[ "body" ], true );
-	// 	}
-	// 	catch ( Exception $e )
-	// 	{
-	// 		$status   = 500;
-	// 		$response = [];
-
-	// 		$this->log( "critical", [
-	// 			"success"      => false,
-	// 			"function"     => "process_payment",
-	// 			"code"         => $status,
-	// 			"order_id"     => "#{$order_id}",
-	// 			"payment_type" => $type,
-	// 			"exception"    => $e->getMessage(),
-	// 			"url"          => $url,
-	// 			"args"         => $args,
-	// 			"response"     => $response,
-	// 		], true );
-	// 	}
-
-	// 	// Check response status not success
-	// 	if ( $status < 200 || $status >= 300 )
-	// 	{
-	// 		$this->log( "critical", [
-	// 			"success"      => false,
-	// 			"function"     => "process_payment",
-	// 			"code"         => $status,
-	// 			"order_id"     => "#{$order_id}",
-	// 			"payment_type" => $type,
-	// 			"error"        => "Payment method failure - EC:005",
-	// 			"url"          => $url,
-	// 			"args"         => $args,
-	// 			"response"     => $response,
-	// 		], true );
-
-	// 		return [
-	// 			"success" => false,
-	// 			"message" => __( "Payment method failure.", "wc_nickelpay" ) . " EC:005",
-	// 			"code"    => "process_payment",
-	// 			"data"    => [],
-	// 		];
-	// 	}
-
-	// 	// Log if debug enabled
-	// 	$this->log( "info", [
-	// 		"success"      => true,
-	// 		"function"     => "process_payment",
-	// 		"code"         => $status,
-	// 		"order_id"     => "#{$order_id}",
-	// 		"payment_type" => $type,
-	// 		"url"          => $url,
-	// 		"args"         => $args,
-	// 		"response"     => $response,
-	// 	] );
-
-	// 	return [
-	// 		"success" => true,
-	// 		"message" => __( "Payment processed successfully.", "wc_nickelpay" ),
-	// 		"code"    => "process_payment",
-	// 		"data"    => $response,
-	// 	];
-	// }
-
-	// /**
-	//  * Register the webhooks
-	//  *
-	//  * @since 	1.0.0
-	//  * @param 	array 	$data
-	//  * @param 	bool 	$unregister
-	//  * @return 	array
-	//  */
-	// public function webhook( array $data, bool $unregister = false )
-	// {
-	// 	$try    = 0;
-	// 	$token  = null;
-	// 	$billet = -1;
-	// 	$pix    = -1;
-
-	// 	do
-	// 	{
-	// 		// Retrieve token
-	// 		$token = $this->generate_token( $data[ "account" ] );
-	// 		$try++;
-	// 	}
-	// 	while ( !$token && $try < 3 );
-
-	// 	if ( !$token )
-	// 		return null;
-
-	// 	if ( isset( $data[ "billet" ] ) )
-	// 	{
-	// 		$type = "cash_in_boleto";
-
-	// 		if ( $unregister )
-	// 		{
-	// 			$billet = $this->delete_webhook( [
-	// 				"token"   => $token,
-	// 				"type"    => $type,
-	// 			] );
-	// 		}
-	// 		else
-	// 		{
-	// 			$billet = $this->create_webhook( [
-	// 				"token"   => $token,
-	// 				"type"    => $type,
-	// 				"url"     => $data[ "billet" ][ "url"     ],
-	// 				"account" => $data[ "billet" ][ "webhook" ],
-	// 			] );
-	// 		}
-	// 	}
-
-	// 	if ( isset( $data[ "pix" ] ) )
-	// 	{
-	// 		$type = "cash_in_pix_receive";
-
-	// 		if ( $unregister )
-	// 		{
-	// 			$pix = $this->delete_webhook( [
-	// 				"token"   => $token,
-	// 				"type"    => $type,
-	// 			] );
-	// 		}
-	// 		else
-	// 		{
-	// 			$pix = $this->create_webhook( [
-	// 				"token"   => $token,
-	// 				"type"    => $type,
-	// 				"url"     => $data[ "pix" ][ "url"     ],
-	// 				"account" => $data[ "pix" ][ "webhook" ],
-	// 			] );
-	// 		}
-	// 	}
-
-	// 	return [
-	// 		"billet" => $billet,
-	// 		"pix"    => $pix
-	// 	];
-	// }
+	/**
+	 * Undocumented function
+	 *
+	 * @param 	int 	$product_id
+	 * @return 	array|false
+	 */
+	public function get_product_detail( int $product_id ) : array|false
+	{
+		$detail_url = $this->urls[ "product" ][ "details" ];
+        $base_url   = $this->get_base_url();
+        $url        = "{$base_url}/{$detail_url}/{$product_id}";
+
+        list( $app_id, $app_sc ) = $this->get_app_credentials();
+
+        if ( empty( $app_id ) || empty( $app_sc ) )
+        {
+            $this->log( "error", [
+                "success"  => 0,
+                "function" => "get_product_detail",
+                "code"     => 500,
+                "message"  => "Missing app_id or app_secret",
+                "url"      => $url,
+                "args"     => [ $this->env, $app_id, $app_sc ],
+                "response" => null,
+            ], true );
+
+            return false;
+        }
+
+        $token      = $this->get_token();
+
+        if ( $token === false )
+			return false;
+
+        $args       = [
+            "timeout" => 60,
+            "headers" => [
+                "Content-Type"   => "application/json",
+                "Authori-key"    => $app_sc,
+                "Authori-zation" => "Bearer {$token}",
+            ],
+        ];
+
+        try
+        {
+            $response      = wp_remote_get( $url, $args );
+
+            $response_body = $this->handle_api_response( $response, $url, $args, "get_product_detail" );
+
+            if ( !$response_body )
+				return false;
+
+            return $response_body[ "data" ];
+        }
+        catch ( Exception $e )
+        {
+            $this->log( "critical", [
+                "success"  => 0,
+                "function" => "get_product_detail",
+                "code"     => 500,
+                "message"  => $e->getMessage(),
+                "url"      => $url,
+                "args"     => $args,
+                "response" => null,
+            ], true );
+
+            return false;
+        }
+	}
+
+	/**
+	 * Undocumented function
+	 *
+	 * @since 	1.0.0
+	 * @return 	array|false
+	 */
+	public function get_products() : array|false
+	{
+        $base_url   = $this->get_base_url();
+        $url        = "{$base_url}/" . $this->urls[ "product" ][ "list" ];
+
+        list( $app_id, $app_sc ) = $this->get_app_credentials();
+
+		if ( empty( $app_id ) || empty( $app_sc ) )
+		{
+			$this->log( "error", [
+				"success"  => 0, // false
+				"function" => "get_products",
+				"code"     => 500,
+				"message"  => "Missing app_id or app_secret",
+				"url"      => $url,
+				"args"     => [ $this->env, $app_id, $app_sc ],
+				"response" => null,
+			], true );
+
+			return false;
+		}
+
+		$token      = $this->get_token();
+
+		if ( $token === false )
+			return false;
+
+		$args       = [
+			"timeout" => 60,
+			"headers" => [
+				"Content-Type"   => "application/json",
+				"Authori-key"    => $app_sc,
+				"Authori-zation" => "Beare {$token}",
+			],
+		];
+
+		$limit      = 50;
+		$products   = [];
+
+		$categories = $this->get_categories();
+
+		if ( $categories === false )
+			return false;
+
+		foreach ( $categories as $category )
+		{
+			$page  = 1;
+			$count = 0;
+
+			do
+			{
+				try
+				{
+					$full_url      = "{$url}?cate_id=" . $category[ "id" ] . "&page={$page}&limit={$limit}";
+
+					$response      = wp_remote_get( $full_url, $args );
+
+					$response_body = $this->handle_api_response( $response, $full_url, $args, "get_products" );
+
+					if ( !$response_body )
+						return false;
+
+					if ( $response_body[ "data" ][ "count" ] >= 1 )
+					{
+						$list     = $response_body[ "data" ][ "list" ];
+						$products = array_merge( $products, $list );
+					}
+
+					$page++;
+
+					$count = $response_body[ "data" ][ "count" ] ?? 0;
+				}
+				catch ( Exception $e )
+				{
+					$this->log( "critical", [
+						"success"  => 0, // false
+						"function" => "get_products",
+						"code"     => $status,
+						"message"  => $e->getMessage(),
+						"url"      => $full_url,
+						"args"     => array_merge( $args, $params ),
+						"response" => $response ?? null,
+					], true );
+
+					continue;
+				}
+			}
+			while ( $count == $limit );
+		}
+
+		foreach ( $products as $index => &$product )
+		{
+			$details = $this->get_product_detail( $product[ "id" ] );
+
+			if ( $details === false )
+			{
+				unset( $products[ $index ] );
+				continue;
+			}
+
+			$product = $details;
+		}
+
+		return $products;
+	}
 }
