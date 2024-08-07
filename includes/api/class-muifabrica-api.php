@@ -347,8 +347,9 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Undocumented function
+	 * Get the product details.
 	 *
+	 * @since 	1.0.0
 	 * @param 	int 	$product_id
 	 * @return 	array|false
 	 */
@@ -417,7 +418,7 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Undocumented function
+	 * Get the list of products.
 	 *
 	 * @since 	1.0.0
 	 * @return 	array|false
