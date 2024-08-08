@@ -9,7 +9,8 @@
  * @package 	Muifabrica_Integration/Api
  * @version 	1.0.0
  */
-defined( "ABSPATH" ) || exit;
+
+namespace Muifabrica_Integration\Api;
 
 class Muifabrica_Api
 {
@@ -93,7 +94,7 @@ class Muifabrica_Api
 	private function log( string $type, array $data, bool $is_error = false ) : void
 	{
 		// Get instance of Nickelpay
-		$mfi = Muifabrica_Integration::init();
+		$mfi = \Muifabrica_Integration::init();
 
 		// Log data with appropriate log level
 		$mfi->log( $type, wc_print_r( $data, true ), $is_error );
@@ -147,6 +148,7 @@ class Muifabrica_Api
                 "args"     => $params,
                 "response" => $response,
             ], true );
+
             return false;
         }
 
@@ -164,6 +166,7 @@ class Muifabrica_Api
                 "args"     => $params,
                 "response" => $response_body,
             ] );
+
             return false;
         }
 
@@ -460,6 +463,7 @@ class Muifabrica_Api
 		];
 
 		$limit      = 50;
+		$aux_prds   = [];
 		$products   = [];
 
 		$categories = $this->get_categories();
@@ -488,7 +492,7 @@ class Muifabrica_Api
 					if ( $response_body[ "data" ][ "count" ] >= 1 )
 					{
 						$list     = $response_body[ "data" ][ "list" ];
-						$products = array_merge( $products, $list );
+						$aux_prds = array_merge( $aux_prds, $list );
 					}
 
 					$page++;
@@ -513,17 +517,12 @@ class Muifabrica_Api
 			while ( $count == $limit );
 		}
 
-		foreach ( $products as $index => &$product )
+		foreach ( $aux_prds as $product )
 		{
 			$details = $this->get_product_detail( $product[ "id" ] );
 
-			if ( $details === false )
-			{
-				unset( $products[ $index ] );
-				continue;
-			}
-
-			$product = $details;
+			if ( $details !== false )
+				$products[ $details[ "id" ] ] = json_decode( json_encode( $details ) );
 		}
 
 		return $products;
