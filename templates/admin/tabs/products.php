@@ -14,7 +14,7 @@ defined( "ABSPATH" ) || exit;
 <section>
 	<div class="wrap-mfi" id="" >
 		<h2 class="wp-heading-inline" style="display:inline;" >
-			<?php _e( "Produtos", "muifabrica_integration" ); ?>
+			<?php _e( "Produtos importados", "muifabrica_integration" ); ?>
 		</h2>
 
 		<p><?php _e( "Produtos - em desenvolvimento", "muifabrica_integration" ); ?></p>
