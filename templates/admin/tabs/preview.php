@@ -9,14 +9,28 @@
 
 defined( "ABSPATH" ) || exit;
 
+use \Muifabrica_Integration\Classes\Tables\MFI_Preview_table;
+
+add_thickbox();
+
+$pv_table = new MFI_Preview_table();
 ?>
 
 <section>
-	<div class="wrap-mfi" id="" >
-		<h2 class="wp-heading-inline" style="display:inline;" >
-			<?php _e( "Produtos não importados", "muifabrica_integration" ); ?>
-		</h2>
+	<div class="wrap-mfi" id="mfi-preview-products-list-table" >
 
-		<p><?php _e( "Produtos não importados - em desenvolvimento!", "muifabrica_integration" ); ?></p>
+		<form id="mfi-preview_products-list-table-form" method="post" >
+			<?php
+				$page  = htmlspecialchars( $_POST[ "page" ] ?? "" );
+				$paged = filter_input( INPUT_GET, 'paged', FILTER_SANITIZE_NUMBER_INT );
+
+				printf( "<input type='hidden' name='page'  value='%s' />", $page  );
+				printf( "<input type='hidden' name='paged' value='%d' />", $paged );
+
+				$pv_table->prepare_items();
+				$pv_table->display();
+			?>
+		</form>
+
 	</div>
 </section>
