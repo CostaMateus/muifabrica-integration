@@ -210,12 +210,13 @@ class Muifabrica_Integration
 	 */
 	public function add_classes() : void
 	{
-		// TODO rever quais classes serao usadas
+		require_once( self::DIR . "/includes/classes/helpers/class-mfi-helper.php"        );
 
-		// require_once( self::DIR . "/includes/classes/helpers/class-woo-mfi-helper.php"        );
+		require_once( self::DIR . "/includes/classes/tables/class-mfi-preview-table.php"  );
+		require_once( self::DIR . "/includes/classes/class-mfi-preview.php"               );
+		new Muifabrica_Integration\Classes\MFI_Preview();
 
 		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-orders-table.php"   );
-		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-preview-table.php"  );
 		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-products-table.php" );
 		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-users-table.php"    );
 
@@ -225,7 +226,6 @@ class Muifabrica_Integration
 		// require_once( self::DIR . "/includes/classes/class-woo-mfi-users.php"                 );
 
 		// new Muifabrica_Integration\Classes\DSM_Orders();
-		// new Muifabrica_Integration\Classes\DSM_Products();
 		// new Muifabrica_Integration\Classes\DSM_Tags();
 		// new Muifabrica_Integration\Classes\DSM_Users();
 
