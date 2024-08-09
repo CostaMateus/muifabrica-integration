@@ -3,21 +3,22 @@
  * Preview table class.
  *
  * @author 		Mateus Costa <mateus@costamateus.com.br>
- * @package 	Dropshipping_Shopkeeper\Classes\Tables
+ * @package 	Muifabrica_Integration\Classes\Tables
  * @version 	1.0.0
  */
 
-namespace Dropshipping_Shopkeeper\Classes\Tables;
+namespace Muifabrica_Integration\Classes\Tables;
 
-use Dropshipping_Shopkeeper\Classes\Helpers\DSM_Helper;
+use Muifabrica_Integration\Api\Muifabrica_Api;
+use Muifabrica_Integration\Classes\Helpers\MFI_Helper;
 
-class DSM_Preview_table extends \WP_List_Table
+class MFI_Preview_table extends \WP_List_Table
 {
     /**
      * Products data
      *
      * @since   1.0.0
-     * @var     array|stdClass
+     * @var     array|false
      */
     protected $products;
 
@@ -25,57 +26,9 @@ class DSM_Preview_table extends \WP_List_Table
      * User data
      *
      * @since   1.0.0
-     * @var     array|stdClass
+     * @var     API
      */
-    protected $supplier;
-
-    /**
-     * Supplier url
-     *
-     * @since   1.0.0
-     * @var     strings
-     */
-    protected $_url;
-
-    /**
-     * Supplier secret
-     *
-     * @since   1.0.0
-     * @var     string
-     */
-    protected $_secret_s;
-
-    /**
-     * Supplier prefix
-     *
-     * @since   1.0.0
-     * @var     string
-     */
-    protected $_prefix;
-
-    /**
-     * Shopkeepers secret
-     *
-     * @since   1.0.0
-     * @var     string
-     */
-    protected $_secret;
-
-    /**
-     * Shopkeeper email
-     *
-     * @since   1.0.0
-     * @var     string
-     */
-    protected $_email;
-
-    /**
-     * Supplier request args
-     *
-     * @since   1.0.0
-     * @var     array
-     */
-    protected $_req_args;
+    protected $api;
 
     /**
      * Constructor
@@ -87,76 +40,27 @@ class DSM_Preview_table extends \WP_List_Table
     {
         parent::__construct();
 
-        if ( !isset( $_GET[ "uid" ] ) )
-        {
-            $url = admin_url( "admin.php?page=woo_ds_shopkeeper&tab=suppliers" );
-            wp_redirect( $url );
-            exit();
-        }
-
-        $this->supplier = get_user_by( "id", $_GET[ "uid" ] );
-
-        $this->set_props();
-
-        $this->products = $this->get_preview_products();
-    }
-
-    /**
-     * Set global props
-     *
-     * @since   1.0.0
-     * @return  void
-     */
-    private function set_props() : void
-    {
-        $this->_url      = get_user_meta( $this->supplier->ID, "_dsm_url",        true );
-        $this->_secret   = get_user_meta( $this->supplier->ID, "_dsm_secret",     true );
-        $this->_secret_s = get_user_meta( $this->supplier->ID, "_dsm_secret_s",   true );
-        $this->_prefix   = get_user_meta( $this->supplier->ID, "_dsm_sku_prefix", true );
-
-        $this->_email    = get_option( "_dsm_email_general" );
-
-        if ( empty( $this->_email ) || !is_email( $this->_email ) )
-            $this->_email = get_bloginfo( "admin_email" );
-
-        $this->_req_args = [
-            "timeout"   => 60,
-            "sslverify" => false,
-            "headers"   => [
-                "_dsm_email"      => $this->_email,
-                "_dsm_supplier"   => $this->_secret_s,
-                "_dsm_shopkeeper" => $this->_secret,
-            ]
-        ];
-    }
-
-    /**
-     * Get user login
-     *
-     * @since   1.0.0
-     * @return  string
-     */
-    public function get_user_login() : string
-    {
-        return $this->supplier->user_login;
+        $this->api      = new Muifabrica_Api();
+        $this->products = $this->api->get_products();
     }
 
     /**
      * Define the columns that are going to be used in the table
      *
      * @since   1.0.0
-     * @return  array   $columns    The array of columns to use with the table
+     * @return  array   The array of columns to use with the table
      */
     public function get_columns() : array
     {
-        return $columns = [
-            "cb"         => "<input type='checkbox' />",
-            "thumbnail"  => "<span class='wc-image'></span>",
-            "name"       => __( "Name",              "woo_ds_shopkeeper" ),
-            "sku"        => __( "SKU",               "woo_ds_shopkeeper" ),
-            "stock"      => __( "Stock",             "woo_ds_shopkeeper" ),
-            "price"      => __( "Price",             "woo_ds_shopkeeper" ),
-            "categories" => __( "Categories",        "woo_ds_shopkeeper" ),
+        return [
+            "cb"          => "<input type='checkbox' />",
+            "thumbnail"   => "<span class='wc-image'></span>",
+            "name"        => __( "Nome",              "muifabrica_integration" ),
+            "description" => __( "Descrição",         "muifabrica_integration" ),
+            "var_number"  => __( "Nº de variações",   "muifabrica_integration" ),
+            "price"       => __( "Preço",             "muifabrica_integration" ),
+            "ot_price"    => __( "Preço Commodities", "muifabrica_integration" ),
+            "stock"       => __( "Estoque",           "muifabrica_integration" ),
         ];
     }
 
@@ -164,14 +68,16 @@ class DSM_Preview_table extends \WP_List_Table
      * Decide which columns to activate the sorting functionality on
      *
      * @since   1.0.0
-     * @return  array   $sortable     The array of columns that can be sorted by the user
+     * @return  array   The array of columns that can be sorted by the user
      */
     public function get_sortable_columns() : array
     {
-        return $sortable = [
-            "name"     => [ "name",     false ],
-            "sku"      => [ "sku",      false ],
-            "price"    => [ "price",    false ],
+        return [
+            "name"       => [ "name",       false ],
+            "var_number" => [ "var_number", false ],
+            "price"      => [ "price",      false ],
+            "ot_price"   => [ "ot_price",   false ],
+            "stock"      => [ "stock",      false ],
         ];
     }
 
@@ -185,28 +91,36 @@ class DSM_Preview_table extends \WP_List_Table
      */
     public function usort_reorder( $a, $b ) : mixed
     {
-        $order   = ( !empty( $_GET[ "order"   ] ) ) ? $_GET[ "order"   ] : "desc";
-        $orderby = "date";
+        $order   = ( !empty( $_GET[ "order" ] ) ) ? $_GET[ "order" ] : "desc";
+
+        $orderby = "name";
 
         if ( isset( $_GET[ "orderby" ] ) )
         {
             if ( $_GET[ "orderby" ] === "name" )
-                $orderby = "get_name";
-
-            else if ( $_GET[ "orderby" ] === "sku"  )
-                $orderby = "get_sku";
+                $orderby = "store_name_pt";
 
             else
                 $orderby = $_GET[ "orderby" ];
         }
 
-        if ( $orderby == "price" )
+        if ( in_array( $orderby, [ "price", "ot_price", "var_number", "stock" ] ) )
         {
-            $price_a = ( $a->sale_price ) ? $a->sale_price : $a->regular_price;
-            $price_b = ( $a->sale_price ) ? $a->sale_price : $a->regular_price;
-
-            $pa = ( float ) $price_a;
-            $pb = ( float ) $price_b;
+            if ( $orderby == "var_number" )
+            {
+                $pa = count( $a->attrs );
+                $pb = count( $b->attrs );
+            }
+            elseif ( $orderby == "stock" )
+            {
+                $pa = $a->stock;
+                $pb = $b->stock;
+            }
+            else
+            {
+                $pa = ( float ) explode( "US$ ", $a->$orderby )[ 0 ];
+                $pb = ( float ) explode( "US$ ", $b->$orderby )[ 0 ];
+            }
 
             if ( strcasecmp( $pa, $pb ) !== 0 )
             {
@@ -217,15 +131,10 @@ class DSM_Preview_table extends \WP_List_Table
             }
         }
 
-        $columns = [ "name", "sku" ];
+        $result = strcasecmp( $a->store_name_pt, $b->store_name_pt );
 
-        foreach ( $columns as $column )
-        {
-            $result = strcasecmp( $a->$column, $b->$column );
-
-            if ( $result !== 0 )
-                return ( $order === "asc" ) ? $result : -$result;
-        }
+        if ( $result !== 0 )
+            return ( $order === "asc" ) ? $result : -$result;
 
         return null;
     }
@@ -234,11 +143,11 @@ class DSM_Preview_table extends \WP_List_Table
      * Bulk actions options
      *
      * @since   1.0.0
-     * @return  array|void
+     * @return  array
      */
     public function get_bulk_actions() : array
     {
-        return $actions = [ "import" => __( "Import products", "woo_ds_shopkeeper" ) ];
+        return [ "import" => __( "Importar produtos", "muifabrica_integration" ) ];
     }
 
     /**
@@ -249,7 +158,7 @@ class DSM_Preview_table extends \WP_List_Table
      */
     public function no_items() : void
     {
-        _e( "No products found.", "woo_ds_shopkeeper" );
+        _e( "Nenhum produto encontrado.", "muifabrica_integration" );
     }
 
     /**
@@ -368,8 +277,8 @@ class DSM_Preview_table extends \WP_List_Table
     {
         $src = "/wp-content/uploads/woocommerce-placeholder-150x150.png";
 
-        if ( $item->images )
-            $src = $item->images[ 0 ]->src;
+        if ( $item->image )
+            $src = $item->image;
 
         return "<img width='40' height='40' src='{$src}' class='attachment-40x40 size-40x40'
             decoding='async' loading='lazy' sizes='(max-width: 40px) 100vw, 40px' >";
@@ -384,57 +293,38 @@ class DSM_Preview_table extends \WP_List_Table
      */
     public function column_name( $item ) : string
     {
-        return "<strong>{$item->name}</strong>";
+        return "<strong>{$item->store_name_pt}</strong>";
     }
 
     /**
-     * SKU column
+     * Description column
      *
      * @since   1.0.0
      * @param   array|object    $item
      * @return  string
      */
-    public function column_sku( $item ) : string
+    public function column_description( $item ) : string
     {
-        return $item->sku;
+        $id      = "preview-description-modal-{$item->id}";
+        $text    = __( "Ver descrição", "muifabrica_integration" );
+        $content = html_entity_decode( $item->description_pt );
+
+        return "<div>
+            <div id='{$id}' style='display:none;' >{$content}</div>
+            <a href='#TB_inline?&inlineId={$id}' class='thickbox'>{$text}</a>
+        </div>";
     }
 
     /**
-     * Stock column
+     * Variations quantity column
      *
      * @since   1.0.0
      * @param   array|object    $item
      * @return  string
      */
-    public function column_stock( $item ) : string
+    public function column_var_number( $item ) : string
     {
-        $stock = "";
-        $class = "";
-
-        switch ( $item->stock_status )
-        {
-            case "instock":
-                $stock = __( "In stock",     "woo_ds_shopkeeper" );
-                $class = "instock";
-            break;
-
-            case "outofstock":
-                $stock = __( "Out of stock", "woo_ds_shopkeeper" );
-                $class = "outofstock";
-            break;
-
-            case "onbackorder":
-                $stock = __( "On backorder", "woo_ds_shopkeeper" );
-                $class = "onbackorder";
-            break;
-        }
-
-        $text = "<mark class='{$class}'>{$stock}</mark>";
-
-        if ( $item->manage_stock )
-            $text .= " ({$item->stock_quantity})";
-
-        return $text;
+        return count( $item->attrs );
     }
 
     /**
@@ -446,24 +336,42 @@ class DSM_Preview_table extends \WP_List_Table
      */
     public function column_price( $item ) : string
     {
-        return $item->price_html;
+        return "US$ {$item->price}";
     }
 
     /**
-     * Categories column
+     * Price column
      *
      * @since   1.0.0
      * @param   array|object    $item
      * @return  string
      */
-    public function column_categories( $item ) : string
+    public function column_ot_price( $item ) : string
     {
-        $cats = "";
+        return "US$ {$item->ot_price}";
+    }
 
-        foreach ( $item->categories as $cat )
-            $cats .= $cat->name . ( $cat->name != end( $item->categories )->name ? ", " : "" );
+    /**
+     * Stock column
+     *
+     * @since   1.0.0
+     * @param   array|object    $item
+     * @return  string
+     */
+    public function column_stock( $item ) : string
+    {
+        if ( $item->stock > 0 )
+        {
+            $stock = __( "Em estoque",      "muifabrica_integration" );
+            $class = "instock";
+        }
+        else
+        {
+            $stock = __( "Fora de estoque", "muifabrica_integration" );
+            $class = "outofstock";
+        }
 
-        return $cats;
+        return "<mark class='{$class}'>{$stock}</mark> ({$item->stock})";
     }
 
     /**
@@ -478,6 +386,8 @@ class DSM_Preview_table extends \WP_List_Table
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Get products from supplier to preview
      *
      * @since   1.0.0
@@ -494,7 +404,7 @@ class DSM_Preview_table extends \WP_List_Table
 
         if ( is_wp_error( $response ) )
         {
-            \Dropshipping_Shopkeeper::log(
+            \Muifabrica_Integration::log(
                 "error",
                 "Supplier ID {$this->supplier->ID} - api_query_error GET - " .
                 $response->get_error_message() . " - " .
@@ -529,6 +439,8 @@ class DSM_Preview_table extends \WP_List_Table
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Filters the products that have already been imported.
      *
      * This function filters out the products that have already been imported from the given list of products.
@@ -550,6 +462,8 @@ class DSM_Preview_table extends \WP_List_Table
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Import products.
      *
      * This function processes the import of products from the supplier.
@@ -577,7 +491,7 @@ class DSM_Preview_table extends \WP_List_Table
         {
             if ( wc_get_product_id_by_sku( $this->_prefix . $aux_product[ "sku" ] ) ) continue;
 
-            $success    = DSM_Helper::create_product( $aux_product, $this->_prefix, $this->supplier->ID );
+            $success    = MFI_Helper::create_product( $aux_product, $this->_prefix, $this->supplier->ID );
 
             if ( !$success )
             {
@@ -593,7 +507,7 @@ class DSM_Preview_table extends \WP_List_Table
 
         $count   = count( $products ) - $errors[ $this->supplier->ID ][ "warnings" ];
 
-        \Dropshipping_Shopkeeper::log( "info", "Supplier ID {$this->supplier->ID} - imported {$count} products" );
+        \Muifabrica_Integration::log( "info", "Supplier ID {$this->supplier->ID} - imported {$count} products" );
 
 		// Remove the filter.
 		remove_filter( "woocommerce_rest_check_permissions", "__return_true" );
@@ -605,20 +519,22 @@ class DSM_Preview_table extends \WP_List_Table
 
         if ( $warning && $error )
         {
-            DSM_Helper::redirect( "success", $errors );
+            MFI_Helper::redirect( "success", $errors );
             return;
         }
         else if ( !$warning )
         {
-            DSM_Helper::redirect( "warning", $errors );
+            MFI_Helper::redirect( "warning", $errors );
             return;
         }
 
-        DSM_Helper::redirect( "error", $errors );
+        MFI_Helper::redirect( "error", $errors );
         return;
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Inform supplier about imported products.
      *
      * This function prepares to send a notification to the supplier about the products that have been imported.
@@ -631,6 +547,6 @@ class DSM_Preview_table extends \WP_List_Table
     {
         $url = "{$this->_url}/wp-json/dsm/v1/products/imported";
 
-        DSM_Helper::send_imported_products( $this->supplier->ID, $skus, $this->_req_args, $url );
+        MFI_Helper::send_imported_products( $this->supplier->ID, $skus, $this->_req_args, $url );
     }
 }
