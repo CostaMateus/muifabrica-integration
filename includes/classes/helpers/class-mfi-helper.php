@@ -5,15 +5,17 @@
  * This class contains various helper functions for handling products and variations in WooCommerce.
  *
  * @author 		Mateus Costa <mateus@costamateus.com.br>
- * @package 	Dropshipping_Shopkeeper\Classes\Helpers
+ * @package 	Muifabrica_Integration\Classes\Helpers
  * @version 	1.0.0
  */
 
-namespace Dropshipping_Shopkeeper\Classes\Helpers;
+namespace Muifabrica_Integration\Classes\Helpers;
 
-class DSM_Helper
+class MFI_Helper
 {
     /**
+     * TODO rever uso da func
+     *
      * Translate product data into a format suitable for WooCommerce API.
      *
      * This function takes an array of product data and transforms it into a format that can be sent to the WooCommerce API.
@@ -82,6 +84,8 @@ class DSM_Helper
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Translate variation data into a format suitable for WooCommerce API.
      *
      * This function takes an array of variation data, along with images, SKU, SKU prefix, and product ID.
@@ -174,6 +178,8 @@ class DSM_Helper
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Find or create a product category based on the given name and slug.
      *
      * This function checks if a product category already exists with the given slug.
@@ -209,6 +215,8 @@ class DSM_Helper
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Process regular price synchronization for a product.
      *
      * This function compares the current regular price with the new price and updates the product metadata accordingly.
@@ -239,6 +247,8 @@ class DSM_Helper
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Process sale price synchronization for a product.
      *
      * This function compares the current sale price with the new price and updates the product metadata accordingly.
@@ -294,6 +304,8 @@ class DSM_Helper
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Helper function to process price updates.
      *
      * This function compares the current price with the new price and updates the product metadata accordingly.
@@ -332,6 +344,8 @@ class DSM_Helper
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Process product metadata.
      *
      * This function updates the metadata of a product with the provided metadata array.
@@ -356,6 +370,8 @@ class DSM_Helper
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Inform the supplier about imported products.
      *
      * This function sends a POST request to a specific URL, informing the supplier about the imported product SKUs.
@@ -380,7 +396,7 @@ class DSM_Helper
         if ( is_wp_error( $response ) )
         {
             // Log the error message.
-            \Dropshipping_Shopkeeper::log( "error", json_encode( [
+            \Muifabrica_Integration::log( "error", json_encode( [
                 "ERROR",
                 "Supplier ID {$user_id}",
                 "api_query_error POST",
@@ -399,7 +415,7 @@ class DSM_Helper
         if ( $status != 200 )
         {
             // Log the error message with the response data.
-            \Dropshipping_Shopkeeper::log( "error", json_encode( [
+            \Muifabrica_Integration::log( "error", json_encode( [
                 "ERROR",
                 "Supplier ID {$user_id}",
                 "api_query_error POST",
@@ -411,10 +427,12 @@ class DSM_Helper
         }
 
         // Log the response data.
-        \Dropshipping_Shopkeeper::log( "info", json_encode( $data ) );
+        \Muifabrica_Integration::log( "info", json_encode( $data ) );
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Redirect the user to a specific URL with data.
      *
      * This function redirects the user to a specific URL with the provided type and data.
@@ -438,6 +456,8 @@ class DSM_Helper
     }
 
     /**
+     * TODO rever uso da func
+     *
      * Create a new product in WooCommerce.
      *
      * This function creates a new product in WooCommerce based on the provided product data, prefix, and user ID.
@@ -472,8 +492,8 @@ class DSM_Helper
         if ( is_wp_error( $product_response ) )
         {
             // Log the error message.
-            \Dropshipping_Shopkeeper::log( "error", "Supplier ID {$user_id} - error_create_product - " . $product_response->get_error_message(), true );
-            \Dropshipping_Shopkeeper::log( "info", print_r( $product_response, true ), true );
+            \Muifabrica_Integration::log( "error", "Supplier ID {$user_id} - error_create_product - " . $product_response->get_error_message(), true );
+            \Muifabrica_Integration::log( "info", print_r( $product_response, true ), true );
 
             return false;
         }
@@ -571,6 +591,8 @@ class DSM_Helper
 	}
 
     /**
+     * TODO rever uso da func
+     *
      * Upload image from URL
      *
      * @param   string  $image_url
