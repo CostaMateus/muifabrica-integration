@@ -246,21 +246,21 @@ table.wp-list-table mark.onbackorder {
 #mfi-instructions .evenprice {
     font-size: 13px;
 }
-table.wp-list-table .column-name,
-table.wp-list-table .column-supplier,
-table.wp-list-table .column-sku,
-table.wp-list-table .column-woo_ds_shopkeeper_supplier {
+table.wp-list-table .column-name {
+    word-break: normal;
     min-width: 15ch !important;
+}
+table.wp-list-table .column-muifabrica_integration,
+table.wp-list-table .column-price {
     white-space: nowrap;
     word-break: normal;
+    min-width: 10ch !important;
 }
+
+table.wp-list-table .column-var_number,
 table.wp-list-table .column-stock,
-table.wp-list-table .column-price,
 table.wp-list-table .column-s_price,
-table.wp-list-table .column-categories,
-table.wp-list-table .column-product_tag,
 table.wp-list-table .column-date {
-    width: auto !important;
     white-space: nowrap;
     word-break: normal;
 }
