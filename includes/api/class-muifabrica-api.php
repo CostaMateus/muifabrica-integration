@@ -12,6 +12,8 @@
 
 namespace Muifabrica_Integration\Api;
 
+use WP_Error;
+
 class Muifabrica_Api
 {
 	/**
@@ -133,9 +135,9 @@ class Muifabrica_Api
 	 * @param 	string 			$url
 	 * @param 	array 			$params
 	 * @param 	string 			$function_name
-	 * @return 	array
+	 * @return 	array|false
      */
-    private function handle_api_response( array|WP_Error $response, string $url, array $params, string $function_name ) : array
+    private function handle_api_response( array|WP_Error $response, string $url, array $params, string $function_name ) : array|false
     {
         if ( is_wp_error( $response ) )
         {
