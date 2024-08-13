@@ -170,6 +170,8 @@ class Muifabrica_Integration
 		// TODO uso de REST API
 		// require_once( self::DIR . "/includes/rest-api/Utilities/SingletonTrait.php" );
 		// require_once( self::DIR . "/includes/rest-api/Server.php"                   );
+
+		require_once( self::DIR . "/includes/api/class-muifabrica-api.php" );
 	}
 
 	/**
@@ -210,7 +212,6 @@ class Muifabrica_Integration
 	 */
 	public function add_classes() : void
 	{
-		require_once( self::DIR . "/includes/api/class-muifabrica-api.php"                );
 		require_once( self::DIR . "/includes/classes/helpers/class-mfi-helper.php"        );
 
 		// Preview, not imported products
