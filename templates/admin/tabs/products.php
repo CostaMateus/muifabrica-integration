@@ -9,14 +9,26 @@
 
 defined( "ABSPATH" ) || exit;
 
+use \Muifabrica_Integration\Classes\Tables\MFI_Product_Table;
+
+$pd_table = new MFI_Product_Table();
 ?>
 
 <section>
-	<div class="wrap-mfi" id="" >
-		<h2 class="wp-heading-inline" style="display:inline;" >
-			<?php _e( "Produtos importados", "muifabrica_integration" ); ?>
-		</h2>
+	<div class="wrap-mfi" id="mfi-products-list-table" >
 
-		<p><?php _e( "Produtos - em desenvolvimento", "muifabrica_integration" ); ?></p>
+		<form id="mfi-products-list-table-form" method="post" >
+			<?php
+				$page  = htmlspecialchars( $_POST[ "page" ] ?? "" );
+				$paged = filter_input( INPUT_GET, 'paged', FILTER_SANITIZE_NUMBER_INT );
+
+				printf( "<input type='hidden' name='page'  value='%s' />", $page  );
+				printf( "<input type='hidden' name='paged' value='%d' />", $paged );
+
+				$pd_table->prepare_items();
+				$pd_table->display();
+			?>
+		</form>
+
 	</div>
 </section>
