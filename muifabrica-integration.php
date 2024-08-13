@@ -210,6 +210,7 @@ class Muifabrica_Integration
 	 */
 	public function add_classes() : void
 	{
+		require_once( self::DIR . "/includes/api/class-muifabrica-api.php"                );
 		require_once( self::DIR . "/includes/classes/helpers/class-mfi-helper.php"        );
 
 		// Preview, not imported products
