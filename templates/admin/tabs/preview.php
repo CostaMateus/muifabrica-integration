@@ -9,11 +9,11 @@
 
 defined( "ABSPATH" ) || exit;
 
-use \Muifabrica_Integration\Classes\Tables\MFI_Preview_table;
+use \Muifabrica_Integration\Classes\Tables\MFI_Preview_Table;
 
 add_thickbox();
 
-$pv_table = new MFI_Preview_table();
+$pv_table = new MFI_Preview_Table();
 ?>
 
 <section>
