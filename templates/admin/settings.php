@@ -13,9 +13,12 @@ defined( "ABSPATH" ) || exit;
 ?>
 
 <div class="wrap" >
-	<div class="wrap-title mfi-wrap-title" >
-		<img src="<?php echo plugins_url( "assets/images/mfi-settings.png", Muifabrica_Integration::FILE ); ?>" alt="MF Logo" >
-		<h1 class="wp-heading-inline" ><?php echo esc_html( get_admin_page_title() ); ?></h1>
+	<div class="wrap-title" >
+		<h1></h1>
+		<div class="mfi-wrap-title" >
+			<img src="<?php echo plugins_url( "assets/images/mfi-settings.png", Muifabrica_Integration::FILE ); ?>" alt="MF Logo" >
+			<h1 class="wp-heading-inline" ><?php echo esc_html( get_admin_page_title() ); ?></h1>
+		</div>
 	</div>
 
 	<nav class="nav-tab-wrapper" >
