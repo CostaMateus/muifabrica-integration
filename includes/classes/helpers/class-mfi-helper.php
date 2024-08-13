@@ -641,4 +641,114 @@ class MFI_Helper
 
         return $attachment_id;
     }
+
+    /**
+     * Generates all possible combinations of attribute options.
+     *
+     * This function recursively generates combinations of attribute options.
+     * It takes an array of attributes, each containing a name and an array of options,
+     * and returns all possible combinations of these options.
+     *
+     * @since   1.0.0
+     * @param   array   $attributes An array of attributes where each attribute contains a name and an array of options.
+     * @param   int     $index      The current index in the attributes array being processed. Defaults to 0.
+     * @return  array               An array of all possible combinations of attribute options.
+     */
+    private static function combine_attributes( array $attributes, int $index = 0 ) : array
+    {
+        if ( $index == count( $attributes ) ) return [[]];
+
+        $remaining    = self::combine_attributes( $attributes, $index + 1 );
+        $combinations = [];
+
+        foreach ( $attributes[ $index ][ "options" ] as $option )
+        {
+            foreach ( $remaining as $combination )
+            {
+                $combinations[] = array_merge(
+                    [
+                        [
+                            "name"   => $attributes[ $index ][ "name" ],
+                            "option" => $option,
+                        ]
+                    ],
+                    $combination
+                );
+            }
+        }
+
+        return $combinations;
+    }
+
+    /**
+     * Finds a specific combination within an array of combinations.
+     *
+     * This function searches through an array of attribute combinations to find a
+     * combination that matches the provided search string. The search string should be
+     * a comma-separated list of attribute options.
+     *
+     * @since   1.0.0
+     * @param   array   $combinations An array of attribute combinations.
+     * @param   string  $search       A comma-separated string of attribute options to search for.
+     * @return  array|null            The matching combination if found, or null if not found.
+     */
+    private static function find_combination( array $combinations, string $search ) : mixed
+    {
+        $search_array = explode( ",", $search );
+
+        foreach ( $combinations as $combination )
+        {
+            $options = array_column( $combination, "option" );
+
+            if ( $options === $search_array )
+                return $combination;
+        }
+
+        return null;
+    }
+
+    /**
+     * Finds a specific variation within an array of variations based on attributes.
+     *
+     * This function searches through an array of variations to find a variation that matches
+     * the provided search array. The search array contains key-value pairs where the key is
+     * the attribute name (case-insensitive) and the value is the desired option.
+     *
+     * @since   1.0.0
+     * @param   array   $variations An array of variations, each containing a description, sku, and attributes.
+     * @param   array   $search     An associative array of attribute names (case-insensitive) and desired options.
+     * @return  array|null          The matching variation if found, or null if not found.
+     */
+    private static function find_variation( array $variations, array $search ) : mixed
+    {
+        foreach ( $variations as $variation )
+        {
+            $match = true;
+
+            foreach ( $search as $key => $value )
+            {
+                $found = false;
+
+                foreach ( $variation[ "attributes" ] as $attribute )
+                {
+                    if ( strcasecmp( $attribute[ "name" ], $key ) === 0 && $attribute[ "option" ] == $value )
+                    {
+                        $found = true;
+                        break;
+                    }
+                }
+
+                if ( !$found )
+                {
+                    $match = false;
+                    break;
+                }
+            }
+
+            if ( $match )
+                return $variation;
+        }
+
+        return null;
+    }
 }
