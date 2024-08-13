@@ -36,7 +36,7 @@ class MFI_Preview
 		{
 			$product = wc_get_product( $product_id );
 
-			if ( "yes" != $product->get_meta( "_mfi_supplied" ) )
+			if ( "yes" == $product->get_meta( "_mfi_supplied" ) )
 				echo "<strong>Muifabrica</strong><br>";
 		}
 	}

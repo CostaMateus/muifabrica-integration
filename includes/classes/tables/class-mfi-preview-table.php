@@ -483,13 +483,8 @@ class MFI_Preview_table extends \WP_List_Table
      */
     private function process_import_products( $products ) : void
     {
-        $imported = [];
-        $errors   = [
-            "errors"   => 0,
-            "warnings" => 0,
-            "code"     => 0,
-            "count"    => 0,
-        ];
+        $count    = 0;
+        $warnings = 0;
 
 		// Disable permissions check locally
 		add_filter( "woocommerce_rest_check_permissions", "__return_true" );
@@ -498,36 +493,31 @@ class MFI_Preview_table extends \WP_List_Table
         {
             if ( wc_get_product_id_by_sku( $this->_prefix_parent . $aux_product[ "attrs" ][ 0 ][ "unique" ] ) ) continue;
 
-            $prefixes   = [
+            $prefixes = [
                 "parent" => $this->_prefix_parent,
                 "child"  => $this->_prefix_child,
             ];
 
-            $success    = MFI_Helper::create_product( $aux_product, $prefixes );
+            $success  = MFI_Helper::create_product( $aux_product, $prefixes );
 
             if ( !$success )
-            {
-                $errors[ "warnings" ]++;
-                continue;
-            }
-
-            $imported[] = $aux_product[ "attrs" ][ 0 ][ "unique" ];
+                $warnings++;
         }
 
-        $count   = count( $products ) - $errors[ "warnings" ];
+        $count    = count( $products ) - $warnings;
 
         \Muifabrica_Integration::log( "info", "MFI Imported {$count} products" );
 
 		// Remove the filter.
 		remove_filter( "woocommerce_rest_check_permissions", "__return_true" );
 
-        $errors[ "count" ] = $count;
+        $data     = [
+            "warnings" => $warnings,
+            "count"    => $count,
+            "code"     => ( $warnings != 0 ) ? "success" : "warning",
+        ];
 
-        $warning = $errors[ "warnings" ] == 0;
-        $error   = $errors[ "errors"   ] == 0;
-        $type    = ( $warning && $error ) ? "success" : ( ( !$warning ) ? "warning" : "errors" );
-
-        MFI_Helper::redirect( $type, $errors );
+        MFI_Helper::redirect( $data[ "code" ], $data );
         return;
     }
 }

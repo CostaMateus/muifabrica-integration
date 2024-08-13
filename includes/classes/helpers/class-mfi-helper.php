@@ -336,11 +336,13 @@ class MFI_Helper
      */
     public static function redirect( string $type, array $data ) : void
     {
+        $domain = \Muifabrica_Integration::DOMAIN;
+
         // Prepare the data to be passed in the URL.
-        $data = http_build_query( [ "data" => $data ] );
+        $data   = http_build_query( [ "data" => $data ] );
 
         // Construct the URL with the provided type and data.
-        $url  = admin_url( "admin.php?page=" . \Muifabrica_Integration::DOMAIN. "&tab=preview&{$type}_message=DRPWE&{$data}" );
+        $url    = admin_url( "admin.php?page={$domain}&tab=preview&{$type}_message=OK&{$data}" );
 
         // Redirect the user to the constructed URL
         if ( wp_redirect( $url ) ) exit();
