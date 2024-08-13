@@ -431,15 +431,13 @@ class MFI_Helper
     }
 
     /**
-     * TODO rever uso da func
-     *
      * Redirect the user to a specific URL with data.
      *
-     * This function redirects the user to a specific URL with the provided type and data.
+     * This function constructs a URL with a given type and data, and then redirects the user to that URL. It is typically used within the WordPress admin area.
      *
      * @since   1.0.0
-     * @param   string  $type   The type of the message.
-     * @param   array   $data   The data to be passed in the URL.
+     * @param   string  $type   The type of message to be passed in the URL (e.g., success or error).
+     * @param   array   $data   An associative array of data to be included in the URL as a query string.
      * @return  void
      */
     public static function redirect( string $type, array $data ) : void
@@ -448,10 +446,11 @@ class MFI_Helper
         $data = http_build_query( [ "data" => $data ] );
 
         // Construct the URL with the provided type and data.
-        $url  = admin_url( "admin.php?page=woo_ds_shopkeeper&tab=suppliers&{$type}_message=DRPWE&{$data}" );
+        $url  = admin_url( "admin.php?page=" . \Muifabrica_Integration::DOMAIN. "&tab=preview&{$type}_message=DRPWE&{$data}" );
 
         // Redirect the user to the constructed URL
-        wp_redirect( $url );
+        if ( wp_redirect( $url ) ) exit();
+
         return;
     }
 
@@ -572,11 +571,15 @@ class MFI_Helper
     }
 
 	/**
-	 * Create all product variations from existing attributes.
-	 *
-	 * @param   int   $product_id   Product ID.
-	 * @return  void
-	 */
+     * Create all product variations from existing attributes.
+     *
+     * This function generates all possible variations for a given product based on its attributes.
+     * It interacts with the WooCommerce data store to create and sort the variations.
+     *
+	 * @since 	1.0.0
+     * @param   int   $product_id   The ID of the product for which variations are to be created.
+     * @return  void
+     */
 	private static function create_all_product_variations( $product_id ) : void
     {
 		$product    = wc_get_product( $product_id );
@@ -591,13 +594,15 @@ class MFI_Helper
 	}
 
     /**
-     * TODO rever uso da func
+     * Upload an image from a URL and attach it to a post.
      *
-     * Upload image from URL
+     * This function downloads an image from a provided URL, handles the file upload, and associates
+     * the uploaded image as an attachment to a specified post. It returns the attachment ID if successful.
      *
-     * @param   string  $image_url
-     * @param   int     $post_id
-     * @return  mixed
+	 * @since 	1.0.0
+     * @param   string  $image_url  The URL of the image to be downloaded and uploaded.
+     * @param   int     $post_id    The ID of the post to which the image should be attached.
+     * @return  mixed               The attachment ID if successful, or null if there was an error.
      */
     private static function upload_file_by_url( $image_url, $post_id ) : mixed
     {
