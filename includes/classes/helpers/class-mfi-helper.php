@@ -35,15 +35,15 @@ class MFI_Helper
         $metadatas    = [
             [
                 "key"   => "_mfi_regular_price",
-                "value" => $product[ "price" ], // ot_price
-            ], [
-                "key"   => "_mfi_sale_price",
-                "value" => $product[ "price" ], // ot_price
+                "value" => $product[ "price"    ],
             ], [
                 "key"   => "_mfi_status_regular",
                 "value" => "even",
             ], [
-                "key"   => "_mfi_status_sale",
+                "key"   => "_mfi_regular_ot_price",
+                "value" => $product[ "ot_price" ],
+            ], [
+                "key"   => "_mfi_status_regular_ot",
                 "value" => "even",
             ], [
                 "key"   => "_mfi_supplied",
@@ -91,11 +91,11 @@ class MFI_Helper
                 "description"    => "",
                 "sku"            => $variation[ "unique" ],
                 "regular_price"  => $variation[ "price"  ],
-                "sale_price"     => $variation[ "price"  ],
+                // "sale_price"     => $variation[ "price"  ],
                 "status"         => "publish",
                 "manage_stock"   => true,
-                "stock_quantity" => $variation[ "stock" ],
-                "stock_status"   => $variation[ "stock" ] > 0 ? "instock" : "outofstock",
+                "stock_quantity" => $variation[ "stock"  ],
+                "stock_status"   => $variation[ "stock"  ] > 0 ? "instock" : "outofstock",
                 "weight"         => $variation[ "weight" ],
                 "dimensions"     => [
                     "length" => $variation[ "length" ],
@@ -103,7 +103,7 @@ class MFI_Helper
                     "height" => $variation[ "height" ],
                 ],
                 "image"          => [
-                    "src"    => $variation[ "pic" ],
+                    "src"    => $variation[ "pic"    ],
                     "name"   => "",
                     "alt"    => "",
                 ],
@@ -621,5 +621,42 @@ class MFI_Helper
         }
 
         return null;
+    }
+
+    /**
+     * Formats and returns a price string with optional HTML markup based on the price status.
+     *
+     * This method takes the last update date and an array of regular price data,
+     * and returns a formatted price string. If the last update date is more than
+     * two days old, it returns the price without any additional formatting.
+     * Otherwise, it returns the price wrapped in a <mark> HTML element with a CSS class
+     * indicating the price trend (up, down, or even).
+     *
+     * @since   1.0.0
+     * @param   string  $last_upd       The date of the last update in a string format.
+     * @param   array   $data_regular   An associative array containing price data.
+     *                                  It must include:
+     *                                  - 'status': A string indicating the price trend ('up', 'down', 'even').
+     *                                  - 'price': The price value to be formatted.
+     * @return  string                  The formatted price string, with HTML markup if applicable, or the plain price if the last update is more than two days old.
+     */
+    public static function format_mf_price( string $last_upd, array $data_regular ) : string
+    {
+        $class  = "";
+        $text   = "";
+        $status = $data_regular[ "status" ];
+        $price  = $data_regular[ "price"  ];
+
+        // Last update is more than two days old
+        if ( $last_upd && strtotime( $last_upd ) < strtotime( "-2 days" ) )
+            return "US$ {$price}";
+
+        if ( $price )
+        {
+            $class = ( $status == "up" ) ? "upprice" : ( ( $status == "down" ) ? "downprice" : "evenprice" );
+            $text  = "<mark class='{$class}'>US$ {$price}</mark>";
+        }
+
+        return $text;
     }
 }
