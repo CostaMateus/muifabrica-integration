@@ -212,22 +212,25 @@ class Muifabrica_Integration
 	{
 		require_once( self::DIR . "/includes/classes/helpers/class-mfi-helper.php"        );
 
+		// Preview, not imported products
 		require_once( self::DIR . "/includes/classes/tables/class-mfi-preview-table.php"  );
 		require_once( self::DIR . "/includes/classes/class-mfi-preview.php"               );
 		new Muifabrica_Integration\Classes\MFI_Preview();
 
+		// Products, already imported
+		require_once( self::DIR . "/includes/classes/tables/class-mfi-products-table.php" );
+		require_once( self::DIR . "/includes/classes/class-mfi-products.php"              );
+		new Muifabrica_Integration\Classes\MFI_Products();
+
 		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-orders-table.php"   );
-		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-products-table.php" );
 		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-users-table.php"    );
 
 		// require_once( self::DIR . "/includes/classes/class-woo-mfi-orders.php"                );
-		// require_once( self::DIR . "/includes/classes/class-woo-mfi-products.php"              );
 		// require_once( self::DIR . "/includes/classes/class-woo-mfi-tags.php"                  );
 		// require_once( self::DIR . "/includes/classes/class-woo-mfi-users.php"                 );
 
 		// new Muifabrica_Integration\Classes\DSM_Orders();
 		// new Muifabrica_Integration\Classes\DSM_Tags();
-		// new Muifabrica_Integration\Classes\DSM_Users();
 
 		require_once( self::DIR . "/includes/api/class-muifabrica-api.php" );
 	}
@@ -382,7 +385,7 @@ class Muifabrica_Integration
 	 */
 	public function admin_settings_messages( $type, $data ) : void
 	{
-		if ( isset( $data[ "erros" ] ) )
+		if ( isset( $data[ "erros" ] ) && $data[ "erros" ] )
 		{
 			switch ( $data[ "code" ] )
 			{
@@ -393,7 +396,7 @@ class Muifabrica_Integration
 
 			echo "<div class='notice notice-errror is-dismissible'><p>{$message}</p></div>";
 		}
-		elseif ( isset( $data[ "warnings" ] ) )
+		elseif ( isset( $data[ "warnings" ] ) && $data[ "warnings" ] > 0 )
 		{
 			$message = sprintf(
 				__( "Não foi possível importar %1\$s produto(s)!<br>Verifique os logs para maiores detalhes.", "muifabrica_integration" ),

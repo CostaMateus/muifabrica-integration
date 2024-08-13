@@ -514,7 +514,7 @@ class MFI_Preview_table extends \WP_List_Table
         $data     = [
             "warnings" => $warnings,
             "count"    => $count,
-            "code"     => ( $warnings != 0 ) ? "success" : "warning",
+            "code"     => ( $warnings == 0 ) ? "success" : "warning",
         ];
 
         MFI_Helper::redirect( $data[ "code" ], $data );
