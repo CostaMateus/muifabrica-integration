@@ -49,6 +49,8 @@ class MFI_Preview_table extends \WP_List_Table
     /**
      * Constructor.
      *
+     * Initializes the class and sets up necessary properties.
+     *
      * @since   1.0.0
      * @return  void
      */
@@ -63,7 +65,9 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Define the columns that are going to be used in the table
+     * Define the columns that are going to be used in the table.
+     *
+     * Returns an array of columns to display in the table.
      *
      * @since   1.0.0
      * @return  array   The array of columns to use with the table
@@ -83,7 +87,9 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Decide which columns to activate the sorting functionality on
+     * Decide which columns to activate the sorting functionality on.
+     *
+     * Returns an array of columns that can be sorted by the user.
      *
      * @since   1.0.0
      * @return  array   The array of columns that can be sorted by the user
@@ -100,12 +106,14 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Sort users by name, supplier, sku, price or date.
+     * Sort products by name, supplier, SKU, price, or stock.
+     *
+     * This function is used to reorder the products based on the selected column and order.
      *
      * @since   1.0.0
-     * @param   object $a
-     * @param   object $b
-     * @return  int|bool|null
+     * @param   object $a  The first object to compare
+     * @param   object $b  The second object to compare
+     * @return  int|bool|null  Returns a comparison result or null if no difference
      */
     public function usort_reorder( $a, $b ) : mixed
     {
@@ -158,7 +166,9 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Bulk actions options
+     * Bulk actions options.
+     *
+     * Returns an array of bulk action options available for the table.
      *
      * @since   1.0.0
      * @return  array
@@ -169,7 +179,7 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * No items to show
+     * Display a message when there are no items to show.
      *
      * @since   1.0.0
      * @return  void
@@ -180,7 +190,7 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Prepare the table with different parameters, pagination, columns and table elements
+     * Prepare the table with different parameters, including pagination, columns, and table elements.
      *
      * @since   1.0.0
      * @return  void
@@ -224,7 +234,7 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Process the bulk actions
+     * Process bulk actions.
      *
      * @since   1.0.0
      * @return  void
@@ -255,12 +265,15 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Unmapped columns
+     * Unmapped Columns.
+     *
+     * This function handles columns that don't have specific functions mapped to them.
+     * It returns the entire item array or object as a string for troubleshooting purposes.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @param   string          $column_name
-     * @return  mixed
+     * @param   array|object    $item        The item for which the column data is being generated.
+     * @param   string          $column_name The name of the column being displayed.
+     * @return  mixed                        The item's data or a string representation of it.
      */
     public function column_default( $item, $column_name ) : mixed
     {
@@ -273,11 +286,14 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Checkbox column
+     * Checkbox Column
+     *
+     * This function generates the display content for the "Checkbox" column in the table.
+     * It returns a checkbox input element with the item's ID as the value.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @return  string
+     * @param   array|object    $item   The item for which the column data is being generated.
+     * @return  string                  The HTML for the checkbox input element.
      */
     public function column_cb( $item ) : string
     {
@@ -285,11 +301,14 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Thumbnail column
+     * Thumbnail Column.
+     *
+     * This function generates the display content for the "Thumbnail" column in the table.
+     * It displays a 40x40 pixel image, using a placeholder image if no image is provided for the item.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @return  string
+     * @param   array|object    $item   The item for which the column data is being generated.
+     * @return  string                  The HTML for the thumbnail image.
      */
     public function column_thumbnail( $item ) : string
     {
@@ -303,11 +322,14 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Name column
+     * Name Column.
+     *
+     * This function generates the display content for the "Name" column in the table.
+     * It returns the store name of the item in bold text.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @return  string
+     * @param   array|object    $item   The item for which the column data is being generated.
+     * @return  string                  The HTML for the store name in bold text.
      */
     public function column_name( $item ) : string
     {
@@ -315,11 +337,14 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Description column
+     * Description Column.
+     *
+     * This function generates the display content for the "Description" column in the table.
+     * It creates a hidden modal containing the item's description and provides a link to view the description using a Thickbox modal.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @return  string
+     * @param   array|object    $item   The item for which the column data is being generated.
+     * @return  string                  The HTML for the description modal and link.
      */
     public function column_description( $item ) : string
     {
@@ -334,11 +359,14 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Variations quantity column
+     * Variations Quantity Column.
+     *
+     * This function generates the display content for the "Variations Quantity" column in the table.
+     * It returns the number of variations available for the item.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @return  string
+     * @param   array|object    $item   The item for which the column data is being generated.
+     * @return  string                  The number of variations as a string.
      */
     public function column_var_number( $item ) : string
     {
@@ -346,11 +374,14 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Price column
+     * Price Column.
+     *
+     * This function generates the display content for the "Price" column in the table.
+     * It formats the price with a "US$" prefix.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @return  string
+     * @param   array|object    $item   The item for which the column data is being generated.
+     * @return  string                  The formatted price string.
      */
     public function column_price( $item ) : string
     {
@@ -358,11 +389,14 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Price column
+     * Commodity Price Column.
+     *
+     * This function generates the display content for the "Commodity Price" column in the table.
+     * It formats the price with a "US$" prefix.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @return  string
+     * @param   array|object    $item   The item for which the column data is being generated.
+     * @return  string                  The formatted price string.
      */
     public function column_ot_price( $item ) : string
     {
@@ -370,11 +404,15 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * Stock column
+     * Stock Status Column.
+     *
+     * This function generates the display content for the "Stock" column in the table.
+     * It checks the stock quantity of the item and returns a string indicating whether
+     * the item is "In Stock" or "Out of Stock" along with the stock quantity.
      *
      * @since   1.0.0
-     * @param   array|object    $item
-     * @return  string
+     * @param   array|object    $item   The item for which the column data is being generated.
+     * @return  string                  The stock status with the quantity.
      */
     public function column_stock( $item ) : string
     {
@@ -393,8 +431,13 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
+     * Extra Table Navigation.
+     *
+     * This function allows the addition of extra controls or content at the top or bottom of the table.
+     * Currently, this function is not being used, but it is available for future customization.
      *
      * @since   1.0.0
+     * @param   string  $which  Indicates whether the current position is "top" or "bottom" of the table.
      * @return  void
      */
     public function extra_tablenav( $which ) : void
@@ -409,8 +452,8 @@ class MFI_Preview_table extends \WP_List_Table
      * This function filters out the products that have already been imported from the given list of products.
      *
      * @since   1.0.0
-     * @param   array|false     $products   An array of product data to be filtered
-     * @return  array                       An array of product data that have not been imported yet
+     * @param   array|false     $products   An array of product data to be filtered.
+     * @return  array                       An array of product data that have not been imported yet.
      */
     public function filter_products( array|false $products ) : array
     {
@@ -431,9 +474,11 @@ class MFI_Preview_table extends \WP_List_Table
      * Import products.
      *
      * This function processes the import of products from the supplier.
+     * It filters out already imported products, generates WooCommerce products for each new item,
+     * and logs the result of the import process.
      *
      * @since   1.0.0
-     * @param   array   $products   An array of product data to be imported
+     * @param   array   $products   An array of product data to be imported.
      * @return  void
      */
     private function process_import_products( $products ) : void
