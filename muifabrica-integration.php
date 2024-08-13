@@ -474,7 +474,7 @@ class Muifabrica_Integration
 			$url = explode( "?", $_POST[ "_wp_http_referer" ] )[ 1 ];
 
 		// generate token with saved app id and secret
-		( new Muifabrica_Api() )->generate_token();
+		( new Muifabrica_Integration\Api\Muifabrica_Api() )->generate_token();
 
 		wp_redirect( admin_url( "admin.php?{$url}" ) );
 		exit;
