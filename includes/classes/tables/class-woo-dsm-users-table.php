@@ -754,9 +754,6 @@ class DSM_Users_table extends \WP_List_Table
                     }
                 }
 
-                // Inform supplier about imported products
-                if ( !empty( $imported ) ) $this->prepare_to_send_imported_products( $user_id, $imported, $args, $url );
-
                 $count = count( $aux_products ) - $errors[ $user_id ][ "warnings" ];
 
                 \Dropshipping_Shopkeeper::log( "info", "Supplier ID {$user_id} - imported {$count} products" );
@@ -855,24 +852,5 @@ class DSM_Users_table extends \WP_List_Table
                 \Dropshipping_Shopkeeper::log( "info", "Deleted supplier ID {$user_id}" );
             }
         }
-    }
-
-    /**
-     * Inform supplier about imported products.
-     *
-     * This function prepares and sends a notification to the supplier about the imported products.
-     *
-     * @since   1.0.0
-     * @param   int     $user_id    The user ID of the supplier
-     * @param   array   $skus       An array of imported product SKUs
-     * @param   array   $args       An array of API request arguments (headers, etc.)
-     * @param   string  $url        The base URL of the supplier's API endpoint
-     * @return  void
-     */
-    private function prepare_to_send_imported_products( int $user_id, array $skus, array $args, string $url ) : void
-    {
-        $url = "{$url}/imported";
-
-        DSM_Helper::send_imported_products( $user_id, $skus, $args, $url );
     }
 }
