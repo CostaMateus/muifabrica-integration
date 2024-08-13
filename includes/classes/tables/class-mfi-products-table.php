@@ -9,7 +9,9 @@
 
 namespace Muifabrica_Integration\Classes\Tables;
 
-class MFI_Products_table extends \WP_List_Table
+use Muifabrica_Integration\Classes\Helpers\MFI_Helper;
+
+class MFI_Product_Table extends \WP_List_Table
 {
     /**
      * Products data
@@ -18,14 +20,6 @@ class MFI_Products_table extends \WP_List_Table
      * @var     array|stdClass
      */
     protected $products;
-
-    /**
-     * Users data
-     *
-     * @since   1.0.0
-     * @var     array|stdClass
-     */
-    protected $users;
 
     /**
      * Constructor.
@@ -37,7 +31,6 @@ class MFI_Products_table extends \WP_List_Table
     {
         parent::__construct();
 
-        $this->load_users();
         $this->load_products();
     }
 
@@ -53,37 +46,9 @@ class MFI_Products_table extends \WP_List_Table
     {
         $this->products = wc_get_products( [
             "limit"        => -1,
-            "meta_key"     => "_dsm_supplier",
+            "meta_key"     => "_mfi_supplied",
             "meta_compare" => "EXISTS",
         ] );
-
-        foreach ( $this->products as &$product )
-        {
-            foreach ( $this->users as $user )
-            {
-                if ( $user->ID == $product->get_meta( "_dsm_supplier" ) )
-                {
-                    $product->supplier = $user->user_login;
-                    break;
-                }
-            }
-        }
-    }
-
-    /**
-     * Load the users data.
-     *
-     * This method retrieves the user data (suppliers) from the database.
-     *
-     * @since   1.0.0
-     * @return  void
-     */
-    private function load_users() : void
-    {
-		$this->users = get_users( [
-			"role"  => "supplier",
-			"order" => "ASC"
-		] );
     }
 
     /**
@@ -92,24 +57,22 @@ class MFI_Products_table extends \WP_List_Table
      * This method defines the columns that will be displayed in the table.
      *
      * @since   1.0.0
-     * @return  array   $columns    The array of columns to use with the table.
+     * @return  array   The array of columns to use with the table.
      */
     public function get_columns() : array
     {
-        $columns = [
+        return [
             // "cb"         => "<input type='checkbox' name='users[]' />",
             "thumbnail"  => "<span class='wc-image tips'></span>",
-            "name"       => __( "Name",              "woo_ds_shopkeeper" ),
-            "supplier"   => __( "Username Supplier", "woo_ds_shopkeeper" ),
-            "sku"        => __( "SKU",               "woo_ds_shopkeeper" ),
-            "stock"      => __( "Stock",             "woo_ds_shopkeeper" ),
-            "price"      => __( "Price",             "woo_ds_shopkeeper" ),
-            "s_price"    => __( "Supplier Price",    "woo_ds_shopkeeper" ),
-            "categories" => __( "Categories",        "woo_ds_shopkeeper" ),
-            "date"       => __( "Last change",       "woo_ds_shopkeeper" ),
+            "name"       => __( "Nome",                 "muifabrica_integration" ),
+            "sku"        => __( "SKU",                  "muifabrica_integration" ),
+            "stock"      => __( "Estoque",              "muifabrica_integration" ),
+            "price"      => __( "Preço",                "muifabrica_integration" ),
+            "m_price"    => __( "MF Preço",             "muifabrica_integration" ),
+            "m_ot_price" => __( "MF Preço Commodities", "muifabrica_integration" ),
+            "categories" => __( "Categorias",           "muifabrica_integration" ),
+            "date"       => __( "Última alteração",     "muifabrica_integration" ),
         ];
-
-        return $columns;
     }
 
     /**
@@ -118,24 +81,24 @@ class MFI_Products_table extends \WP_List_Table
      * This method defines the columns that can be sorted by the user in the table.
      *
      * @since   1.0.0
-     * @return  array   $sortable     The array of columns that can be sorted by the user.
+     * @return  array   The array of columns that can be sorted by the user.
      */
     public function get_sortable_columns() : array
     {
-        $sortable = [
-            "name"     => [ "name",     false ],
-            "supplier" => [ "supplier", false ],
-            "sku"      => [ "sku",      false ],
-            "price"    => [ "price",    false ],
-            "s_price"  => [ "s_price",  false ],
-            "date"     => [ "date",     false ],
+        return [
+            "name"       => [ "name",       false ],
+            "sku"        => [ "sku",        false ],
+            "stock"      => [ "stock",      false ],
+            "price"      => [ "price",      false ],
+            "m_price"    => [ "m_price",    false ],
+            "m_ot_price" => [ "m_ot_price", false ],
+            "categories" => [ "categories", false ],
+            "date"       => [ "date",       false ],
         ];
-
-        return $sortable;
     }
 
     /**
-     * Sort users by name, supplier, sku, price or date.
+     * Sort users by name, sku, price or date.
      *
      * This method is a custom sorting function used to sort the users (products) based on the selected column and order.
      *
@@ -146,7 +109,7 @@ class MFI_Products_table extends \WP_List_Table
      */
     public function usort_reorder( $a, $b ) : mixed
     {
-        $order   = ( !empty( $_GET[ "order"   ] ) ) ? $_GET[ "order"   ] : "desc";
+        $order   = ( !empty( $_GET[ "order" ] ) ) ? $_GET[ "order" ] : "desc";
         $orderby = "date";
 
         if ( isset( $_GET[ "orderby" ] ) )
@@ -160,6 +123,8 @@ class MFI_Products_table extends \WP_List_Table
             else
                 $orderby = $_GET[ "orderby" ];
         }
+
+        if ( $orderby )
 
         if ( $orderby == "date" )
         {
@@ -177,10 +142,15 @@ class MFI_Products_table extends \WP_List_Table
             $orderby = "price";
         }
 
-        if ( $orderby == "price" )
+        if ( in_array( $orderby, [ "price", "stock" ] ) )
         {
-            $pa = ( float ) $a->get_price();
-            $pb = ( float ) $b->get_price();
+            if ( $orderby == "price" )
+                $func = "get_price";
+            elseif ( $orderby == "stock" )
+                $func = "get_stock_quantity";
+
+            $pa = ( float ) $a->$func();
+            $pb = ( float ) $b->$func();
 
             if ( strcasecmp( $pa, $pb ) !== 0 )
             {
@@ -189,19 +159,6 @@ class MFI_Products_table extends \WP_List_Table
                 else
                     return $pa < $pb;
             }
-
-            $orderby = "supplier";
-        }
-
-        if ( $orderby == "supplier" )
-        {
-            $s1     = $a->get_meta( "_dsm_supplier" );
-            $s2     = $a->get_meta( "_dsm_supplier" );
-
-            $result = strcasecmp( $s1, $s2 );
-
-            if ( $result !== 0 )
-                return ( $order === "asc" ) ? $result : -$result;
         }
 
         $columns = [ "get_name", "get_sku" ];
@@ -242,7 +199,7 @@ class MFI_Products_table extends \WP_List_Table
      */
     public function no_items() : void
     {
-        _e( "No products found.", "woo_ds_shopkeeper" );
+        _e( "Nenhum produto encontrado.", "muifabrica_integration" );
     }
 
     /**
@@ -261,8 +218,6 @@ class MFI_Products_table extends \WP_List_Table
         $sortable              = $this->get_sortable_columns();
 
         $this->_column_headers = [ $columns, $hidden, $sortable ];
-
-        $this->filter_products();
 
         usort( $this->products, [ &$this, "usort_reorder" ] );
 
@@ -363,10 +318,10 @@ class MFI_Products_table extends \WP_List_Table
         $status          = $item->get_status();
         $class           = "";
         $arr_status      = [
-            "publish" => __( "Published",      "woo_ds_shopkeeper" ),
-            "pending" => __( "Pending review", "woo_ds_shopkeeper" ),
-            "draft"   => __( "Draft",          "woo_ds_shopkeeper" ),
-            "private" => __( "Private",        "woo_ds_shopkeeper" ),
+            "publish" => __( "Published",      "muifabrica_integration" ),
+            "pending" => __( "Pending review", "muifabrica_integration" ),
+            "draft"   => __( "Draft",          "muifabrica_integration" ),
+            "private" => __( "Private",        "muifabrica_integration" ),
         ];
 
         if ( $status == "publish" )
@@ -393,47 +348,12 @@ class MFI_Products_table extends \WP_List_Table
                 )
             );
 
-            $actions[ "edit" ] = "<a href='{$edit_link}' target='_blank' >" . __( "Edit",   "woo_ds_shopkeeper" ) . "</a>";
+            $actions[ "edit" ] = "<a href='{$edit_link}' target='_blank' >" . __( "Edit",   "muifabrica_integration" ) . "</a>";
             $product_name      = "<strong><a href='{$edit_link}' target='_blank' >{$item->get_name()}</a></strong>";
             $product_name     .= " - {$status}";
         }
 
         return sprintf( "%1s %2s", $product_name, $this->row_actions( $actions ) );
-    }
-
-    /**
-     * Supplier column.
-     *
-     * This function renders the supplier column in the table.
-     * It displays the supplier name and an "Edit" link if the user has the "edit_posts" capability.
-     * The supplier ID is also displayed as part of the row actions.
-     *
-     * @since   1.0.0
-     * @param   array|object    $item   The product item being displayed in the table row.
-     * @return  string                  The HTML markup for the supplier column.
-     */
-    public function column_supplier( $item ) : string
-    {
-        $id              = $item->get_meta( "_dsm_supplier" );
-        $actions         = [];
-        $actions[ "id" ] = "ID: {$id}";
-        $name            = $item->supplier;
-
-        if ( current_user_can( "edit_posts" ) )
-        {
-            $edit_link = esc_url(
-                add_query_arg(
-                    "wp_http_referer",
-                    urlencode( wp_unslash( $_SERVER[ "REQUEST_URI" ] ) ),
-                    get_edit_user_link( $id )
-                )
-            );
-
-            $actions[ "edit" ] = "<a href='{$edit_link}' target='_blank' >" . __( "Edit",   "woo_ds_shopkeeper" ) . "</a>";
-            $name              = "<strong><a href='{$edit_link}' target='_blank' >{$item->supplier}</a></strong>";
-        }
-
-        return sprintf( "%1s %2s", $name, $this->row_actions( $actions ) );
     }
 
     /**
@@ -468,17 +388,17 @@ class MFI_Products_table extends \WP_List_Table
         switch ( $item->get_stock_status() )
         {
             case "instock":
-                $stock = __( "In stock",     "woo_ds_shopkeeper" );
+                $stock = __( "Em estoque",      "muifabrica_integration" );
                 $class = "instock";
             break;
 
             case "outofstock":
-                $stock = __( "Out of stock", "woo_ds_shopkeeper" );
+                $stock = __( "Fora de estoque", "muifabrica_integration" );
                 $class = "outofstock";
             break;
 
             case "onbackorder":
-                $stock = __( "On backorder", "woo_ds_shopkeeper" );
+                $stock = __( "Sob encomenda",   "muifabrica_integration" );
                 $class = "onbackorder";
             break;
         }
@@ -512,7 +432,7 @@ class MFI_Products_table extends \WP_List_Table
     }
 
     /**
-     * Supplier Price column.
+     * MF Price column.
      *
      * This function renders the supplier price column in the table.
      *
@@ -520,43 +440,37 @@ class MFI_Products_table extends \WP_List_Table
      * @param   array|object    $item   The product item being displayed in the table row.
      * @return  string                  The HTML markup for the supplier price column.
      */
-    public function column_s_price( $item ) : string
+    public function column_m_price( $item ) : string
     {
-        $class       = "";
-        $lastUpdate  = $item->get_meta( "_dsm_supplier_price_upd"      );
+        $last_upd = $item->get_meta( "_mfi_price_upd" );
 
-        $htmlRegular = "";
-        $sttRegular  = $item->get_meta( "_dsm_supplier_status_regular" );
-        $regular     = $item->get_meta( "_dsm_supplier_regular_price"  );
+        $regular  = [
+            "status" => $item->get_meta( "_mfi_status_regular" ),
+            "price"  => $item->get_meta( "_mfi_regular_price"  ),
+        ];
 
-        $htmlSale    = "";
-        $sttSale     = $item->get_meta( "_dsm_supplier_status_sale"    );
-        $sale        = $item->get_meta( "_dsm_supplier_sale_price"     );
+        return MFI_Helper::format_mf_price( $last_upd, $regular );
+    }
 
-        // Last update is more than two days old
-        if ( $lastUpdate && strtotime( $lastUpdate ) < strtotime( "-2 days" ) )
-        {
-            $s = wc_price( $sale    );
-            $r = wc_price( $regular );
+    /**
+     * MF Price Commodities Price column.
+     *
+     * This function renders the supplier price column in the table.
+     *
+     * @since   1.0.0
+     * @param   array|object    $item   The product item being displayed in the table row.
+     * @return  string                  The HTML markup for the supplier price column.
+     */
+    public function column_m_ot_price( $item ) : string
+    {
+        $last_upd = $item->get_meta( "_mfi_ot_price_upd" );
 
-            return ( $sale ) ? "{$s} <del>{$r}</del>" : $r;
-        }
+        $regular  = [
+            "status" => $item->get_meta( "_mfi_status_regular_ot" ),
+            "price"  => $item->get_meta( "_mfi_regular_ot_price"  ),
+        ];
 
-        if ( $regular )
-        {
-            $class       = ( $sttRegular == "up" ) ? "upprice" : ( ( $sttRegular == "down" ) ? "downprice" : "evenprice" );
-            $price       = wc_price( $regular );
-            $htmlRegular = "<mark class='{$class}'>{$price}</mark>";
-        }
-
-        if ( $sale )
-        {
-            $class       = ( $sttSale    == "up" ) ? "upprice" : ( ( $sttSale    == "down" ) ? "downprice" : "evenprice" );
-            $price       = wc_price( $sale );
-            $htmlSale    = "<mark class='{$class}'>{$price}</mark>";
-        }
-
-        return ( $htmlSale ) ? "{$htmlSale} <del>{$htmlRegular}</del>": $htmlRegular;
+        return MFI_Helper::format_mf_price( $last_upd, $regular );
     }
 
     /**
@@ -603,27 +517,5 @@ class MFI_Products_table extends \WP_List_Table
     {
         // if ( $which == "top"    )
         // if ( $which == "bottom" )
-    }
-
-    /**
-     * Filter products.
-     *
-     * This function filters the products based on the "supplier" query parameter.
-     *
-     * @since   1.0.0
-     * @return  void
-     */
-    public function filter_products() : void
-    {
-        if ( isset( $_GET[ "supplier" ] ) )
-        {
-            $products = [];
-
-            foreach ( $this->products as $product )
-                if ( $_GET[ "supplier" ] == $product->get_meta( "_dsm_supplier" ) )
-                    $products[] = $product;
-
-            $this->products = $products;
-        }
     }
 }
