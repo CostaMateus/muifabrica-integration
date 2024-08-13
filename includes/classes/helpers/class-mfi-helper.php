@@ -178,40 +178,39 @@ class MFI_Helper
     }
 
     /**
-     * TODO rever uso da func
-     *
      * Find or create a product category based on the given name and slug.
      *
-     * This function checks if a product category already exists with the given slug.
-     * If it doesn't exist, it creates a new category with the provided name and slug.
+     * This function checks whether a product category with the given slug exists in the WooCommerce store.
+     * If it exists, the function returns the category ID. If it does not exist, the function creates a new
+     * category with the provided name and slug and then returns the new category ID.
      *
-     * @param   string  $name   The category name.
-     * @param   string  $slug   The category slug.
+     * @since   1.0.0
+     * @param   string  $name   The name of the product category.
      * @return  array           An array containing the category ID.
      */
-    public static function find_or_create_category( string $name, string $slug ) : array
+    public static function find_or_create_category( string $name ) : array
     {
-        $result = [];
+        $slug     = sanitize_title( $name );
 
         // Get the term object for the given slug and taxonomy 'product_cat'.
-        $cat    = get_term_by( "slug", $slug, "product_cat" );
+        $category = get_term_by( "slug", $slug, "product_cat" );
 
         // If the term object exists, set the result with the term ID.
-        if ( $cat instanceof \WP_Term )
+        if ( $category instanceof \WP_Term )
         {
-            $result = [ "id" => $cat->term_id ];
+            return [ "id" => $category->term_id ];
         }
         else
         {
             // If the term doesn't exist, create a new term with the given name and slug.
-            $cat = wp_insert_term( $name, "product_cat", [ "slug" => $slug ] );
+            $category = wp_insert_term( $name, "product_cat", [ "slug" => $slug ] );
 
             // If the term creation was successful, set the result with the new term ID.
-            if ( !is_wp_error( $cat ) )
-                $result = [ "id" => $cat[ "term_id" ] ];
+            if ( !is_wp_error( $category ) )
+                return [ "id" => $category[ "term_id" ] ];
         }
 
-        return $result;
+        return [];
     }
 
     /**
@@ -344,15 +343,13 @@ class MFI_Helper
     }
 
     /**
-     * TODO rever uso da func
-     *
      * Process product metadata.
      *
-     * This function updates the metadata of a product with the provided metadata array.
+     * This function updates the metadata of a specified WooCommerce product by iterating through an array of metadata key-value pairs.
      *
-	 * @since 	1.0.0
-     * @param   int     $product_id     The product ID.
-     * @param   array   $metadata       The array of metadata.
+     * @since   1.0.0
+     * @param   int     $product_id     The ID of the WooCommerce product to update.
+     * @param   array   $metadata       An array of associative arrays, where each contains a 'key' and 'value' to be set as product metadata.
      * @return  void
      */
     public static function process_product_metadata( int $product_id, array $metadata ) : void
@@ -367,67 +364,6 @@ class MFI_Helper
 
         // Save the product with the updated metadata.
         $product->save();
-    }
-
-    /**
-     * TODO rever uso da func
-     *
-     * Inform the supplier about imported products.
-     *
-     * This function sends a POST request to a specific URL, informing the supplier about the imported product SKUs.
-     *
-     * @since   1.0.0
-     * @param   int     $user_id    The supplier user ID.
-     * @param   array   $skus       The array of product SKUs.
-     * @param   array   $args       The array of arguments for the remote request.
-     * @param   string  $url        The URL to send the request to.
-     * @return  void
-     */
-    public static function send_imported_products( int $user_id, array $skus, array $args, string $url ) : void
-    {
-        // Prepare the request body with the SKUs in JSON format.
-        $args[ "body"    ]                   = wp_json_encode( [ "skus" => $skus ] );
-        $args[ "headers" ][ "Content-Type" ] = "application/json";
-
-        // Send the POST request to the specified URL.
-        $response = wp_remote_post( $url, $args );
-
-        // Check if there was an error with the request.
-        if ( is_wp_error( $response ) )
-        {
-            // Log the error message.
-            \Muifabrica_Integration::log( "error", json_encode( [
-                "ERROR",
-                "Supplier ID {$user_id}",
-                "api_query_error POST",
-                json_encode( [ "url" => $url ] ),
-                $response->get_error_message(),
-            ] ), true );
-
-            return;
-        }
-
-        // Get the response status code.
-        $status   = wp_remote_retrieve_response_code( $response );
-        $data     = json_decode( $response[ "body" ], true );
-
-        // Check if the response status code is not 200 (OK).
-        if ( $status != 200 )
-        {
-            // Log the error message with the response data.
-            \Muifabrica_Integration::log( "error", json_encode( [
-                "ERROR",
-                "Supplier ID {$user_id}",
-                "api_query_error POST",
-                json_encode( [ "url" => $url ] ),
-                json_encode( $data ),
-            ] ), true );
-
-            return;
-        }
-
-        // Log the response data.
-        \Muifabrica_Integration::log( "info", json_encode( $data ) );
     }
 
     /**
