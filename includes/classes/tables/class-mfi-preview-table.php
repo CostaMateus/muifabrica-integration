@@ -12,7 +12,7 @@ namespace Muifabrica_Integration\Classes\Tables;
 use Muifabrica_Integration\Api\Muifabrica_Api;
 use Muifabrica_Integration\Classes\Helpers\MFI_Helper;
 
-class MFI_Preview_table extends \WP_List_Table
+class MFI_Preview_Table extends \WP_List_Table
 {
     /**
      * Prefix sku parent.
@@ -77,12 +77,12 @@ class MFI_Preview_table extends \WP_List_Table
         return [
             "cb"          => "<input type='checkbox' />",
             "thumbnail"   => "<span class='wc-image'></span>",
-            "name"        => __( "Nome",              "muifabrica_integration" ),
-            "description" => __( "Descrição",         "muifabrica_integration" ),
-            "var_number"  => __( "Nº de variações",   "muifabrica_integration" ),
-            "price"       => __( "Preço",             "muifabrica_integration" ),
-            "ot_price"    => __( "Preço Commodities", "muifabrica_integration" ),
-            "stock"       => __( "Estoque",           "muifabrica_integration" ),
+            "name"        => __( "Nome",                 "muifabrica_integration" ),
+            "description" => __( "Descrição",            "muifabrica_integration" ),
+            "var_number"  => __( "Nº de variações",      "muifabrica_integration" ),
+            "price"       => __( "MF Preço",             "muifabrica_integration" ),
+            "ot_price"    => __( "MF Preço Commodities", "muifabrica_integration" ),
+            "stock"       => __( "Estoque",              "muifabrica_integration" ),
         ];
     }
 
