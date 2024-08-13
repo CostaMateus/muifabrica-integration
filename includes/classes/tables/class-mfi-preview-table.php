@@ -15,7 +15,23 @@ use Muifabrica_Integration\Classes\Helpers\MFI_Helper;
 class MFI_Preview_table extends \WP_List_Table
 {
     /**
-     * Products data
+     * Prefix sku parent.
+     *
+     * @since   1.0.0
+     * @var     string
+     */
+    protected $_prefix_parent = "MFIP-";
+
+    /**
+     * Prefix sku child.
+     *
+     * @since   1.0.0
+     * @var     string
+     */
+    protected $_prefix_child  = "MFI-";
+
+    /**
+     * Products data.
      *
      * @since   1.0.0
      * @var     array|false
@@ -23,7 +39,7 @@ class MFI_Preview_table extends \WP_List_Table
     protected $products;
 
     /**
-     * User data
+     * User data.
      *
      * @since   1.0.0
      * @var     API
@@ -31,7 +47,7 @@ class MFI_Preview_table extends \WP_List_Table
     protected $api;
 
     /**
-     * Constructor
+     * Constructor.
      *
      * @since   1.0.0
      * @return  void
@@ -41,7 +57,9 @@ class MFI_Preview_table extends \WP_List_Table
         parent::__construct();
 
         $this->api      = new Muifabrica_Api();
-        $this->products = $this->api->get_products();
+
+        $aux_products   = $this->api->get_products();
+        $this->products = $this->filter_products( $aux_products );
     }
 
     /**
@@ -386,74 +404,22 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * TODO rever uso da func
-     *
-     * Get products from supplier to preview
-     *
-     * @since   1.0.0
-     * @return  array
-     */
-    public function get_preview_products() : array
-    {
-        if ( !$this->_url || !$this->_secret || !$this->_secret_s ) return [];
-
-        $url      = "{$this->_url}/wp-json/dsm/v1/products";
-
-        // Get supplier products
-        $response = wp_remote_get( $url, $this->_req_args );
-
-        if ( is_wp_error( $response ) )
-        {
-            \Muifabrica_Integration::log(
-                "error",
-                "Supplier ID {$this->supplier->ID} - api_query_error GET - " .
-                $response->get_error_message() . " - " .
-                json_encode( [ "url" => $url ] ),
-                true
-            );
-
-            return [];
-        }
-
-        $data     = json_decode( $response[ "body" ] );
-
-        if ( $data->code == "dsm_rest_cannot_view" )
-        {
-            // call error / no post
-            return [];
-        }
-        else if ( $data->code == "dsm_rest_products_v1_invalid_email" )
-        {
-            // config error / account not created
-            return [];
-        }
-        else if ( $data->code == "dsm_rest_products_v1_invalid_secret" )
-        {
-            // config error / invalid access key
-            return [];
-        }
-
-        $products = $data->data;
-
-        return $this->filter_products( $products );
-    }
-
-    /**
-     * TODO rever uso da func
-     *
      * Filters the products that have already been imported.
      *
      * This function filters out the products that have already been imported from the given list of products.
      *
      * @since   1.0.0
-     * @param   array   $products   An array of product data to be filtered
-     * @return  array               An array of product data that have not been imported yet
+     * @param   array|false     $products   An array of product data to be filtered
+     * @return  array                       An array of product data that have not been imported yet
      */
-    public function filter_products( $products ) : array
+    public function filter_products( array|false $products ) : array
     {
+        if ( $products === false )
+            return [];
+
         foreach ( $products as $key => $product )
         {
-            $product_id = wc_get_product_id_by_sku( $this->_prefix . $product->sku );
+            $product_id = wc_get_product_id_by_sku( $this->_prefix_parent . $product->attrs[ 0 ]->unique );
 
             if ( $product_id ) unset( $products[ $key ] );
         }
@@ -462,8 +428,6 @@ class MFI_Preview_table extends \WP_List_Table
     }
 
     /**
-     * TODO rever uso da func
-     *
      * Import products.
      *
      * This function processes the import of products from the supplier.
@@ -474,79 +438,51 @@ class MFI_Preview_table extends \WP_List_Table
      */
     private function process_import_products( $products ) : void
     {
-        $errors[ $this->supplier->ID ] = [
+        $imported = [];
+        $errors   = [
             "errors"   => 0,
             "warnings" => 0,
             "code"     => 0,
             "count"    => 0,
-            "user"     => $this->supplier->user_login,
         ];
 
 		// Disable permissions check locally
 		add_filter( "woocommerce_rest_check_permissions", "__return_true" );
 
-        $imported = [];
-
         foreach ( $products as $aux_product )
         {
-            if ( wc_get_product_id_by_sku( $this->_prefix . $aux_product[ "sku" ] ) ) continue;
+            if ( wc_get_product_id_by_sku( $this->_prefix_parent . $aux_product[ "attrs" ][ 0 ][ "unique" ] ) ) continue;
 
-            $success    = MFI_Helper::create_product( $aux_product, $this->_prefix, $this->supplier->ID );
+            $prefixes   = [
+                "parent" => $this->_prefix_parent,
+                "child"  => $this->_prefix_child,
+            ];
+
+            $success    = MFI_Helper::create_product( $aux_product, $prefixes );
 
             if ( !$success )
             {
-                $errors[ $this->supplier->ID ][ "warnings" ]++;
+                $errors[ "warnings" ]++;
                 continue;
             }
 
-            $imported[] = $aux_product[ "sku" ];
+            $imported[] = $aux_product[ "attrs" ][ 0 ][ "unique" ];
         }
 
-        // Inform supplier about imported products
-        if ( !empty( $imported ) ) $this->prepare_to_send_imported_products( $imported );
+        $count   = count( $products ) - $errors[ "warnings" ];
 
-        $count   = count( $products ) - $errors[ $this->supplier->ID ][ "warnings" ];
-
-        \Muifabrica_Integration::log( "info", "Supplier ID {$this->supplier->ID} - imported {$count} products" );
+        \Muifabrica_Integration::log( "info", "MFI Imported {$count} products" );
 
 		// Remove the filter.
 		remove_filter( "woocommerce_rest_check_permissions", "__return_true" );
 
-        $errors[ $this->supplier->ID ][ "count" ] = $count;
+        $errors[ "count" ] = $count;
 
-        $warning = max( array_column( $errors, "warnings" ) ) == 0;
-        $error   = max( array_column( $errors, "errors"   ) ) == 0;
+        $warning = $errors[ "warnings" ] == 0;
+        $error   = $errors[ "errors"   ] == 0;
+        $type    = ( $warning && $error ) ? "success" : ( ( !$warning ) ? "warning" : "errors" );
 
-        if ( $warning && $error )
-        {
-            MFI_Helper::redirect( "success", $errors );
-            return;
-        }
-        else if ( !$warning )
-        {
-            MFI_Helper::redirect( "warning", $errors );
-            return;
-        }
-
-        MFI_Helper::redirect( "error", $errors );
+        MFI_Helper::redirect( $type, $errors );
         return;
-    }
-
-    /**
-     * TODO rever uso da func
-     *
-     * Inform supplier about imported products.
-     *
-     * This function prepares to send a notification to the supplier about the products that have been imported.
-     *
-     * @since   1.0.0
-     * @param   array   $skus   An array of SKUs (Stock Keeping Units) for the imported products
-     * @return  void
-     */
-    private function prepare_to_send_imported_products( $skus ) : void
-    {
-        $url = "{$this->_url}/wp-json/dsm/v1/products/imported";
-
-        MFI_Helper::send_imported_products( $this->supplier->ID, $skus, $this->_req_args, $url );
     }
 }
