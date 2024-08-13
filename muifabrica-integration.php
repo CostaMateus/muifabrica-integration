@@ -285,10 +285,7 @@ class Muifabrica_Integration
 			[
 				"ajax_url" => admin_url( "admin-ajax.php" ),
 				"messages" => [
-					"del_users"      => __( "Essa ação excluirá o fornecedor selecionado, assim como todos os produtos dele. Clique OK para confirmar.", "muifabrica_integration" ),
-					"del_products"   => __( "Essa ação excluirá todos os produtos do fornecedor selecionado. Clique OK para confirmar.",                 "muifabrica_integration" ),
-					"select_users"   => __( "Selecione pelo menos um fornecedor, para qualquer ação.",                                                   "muifabrica_integration" ),
-					"select_preview" => __( "Selecione pelo menos um produto para importar.",                                                            "muifabrica_integration" ),
+					"select_preview" => __( "Selecione pelo menos um produto para importar.", "muifabrica_integration" ),
 				]
 			]
 		);
@@ -331,7 +328,7 @@ class Muifabrica_Integration
 	}
 
 	/**
-	 * Add settings page
+	 * Add settings page.
 	 *
 	 * @since 	1.0.0
 	 * @return 	void
@@ -376,7 +373,7 @@ class Muifabrica_Integration
 	}
 
 	/**
-	 * Handles errors and displays messages accordingly
+	 * Handles errors and displays messages accordingly.
 	 *
 	 * @since 	1.0.0
 	 * @param 	string 	$type
@@ -385,83 +382,52 @@ class Muifabrica_Integration
 	 */
 	public function admin_settings_messages( $type, $data ) : void
 	{
-		// TODO reveer uso das mensagens de sucesso / aviso / falha
+		if ( isset( $data[ "erros" ] ) )
+		{
+			switch ( $data[ "code" ] )
+			{
+				default:
+					$message = __( "Erro interno!<br>Verifique os logs para maiores detalhes.", "muifabrica_integration" );
+				break;
+			}
 
-		// foreach ( $data as $user_id => $user_data )
-		// {
-		// 	if ( $user_data[ "errors" ] != 0 )
-		// 	{
-		// 		switch ( $user_data[ "code" ] )
-		// 		{
-		// 			case "MISS":   // users_table
-		// 				$message = sprintf(
-		// 					__( "Missing settings for supplier %1\$s (%2\$s).", "muifabrica_integration" ),
-		// 					$user_data[ "user" ],
-		// 					$user_id
-		// 				);
-		// 			break;
-		// 			case "WRG":   // users_table / wp_remote_get
-		// 				$message = __( "Internal failure, try again!", "muifabrica_integration" );
-		// 			break;
-		// 			case "DRCV":  // users_table / mfi_rest_cannot_view
-		// 				$message = __( "Invalid call, try again!", "muifabrica_integration" );
-		// 			break;
-		// 			case "DRPIE": // users_table / mfi_rest_products_v1_invalid_email
-		// 				$message = sprintf(
-		// 					__( "Account not found at supplier %1\$s (%2\$s).<br>Check with him, if the credentials were properly registered.", "muifabrica_integration" ),
-		// 					$user_data[ "user" ],
-		// 					$user_id
-		// 				);
-		// 			break;
-		// 			case "DRPIS": // users_table / mfi_rest_products_v1_invalid_secret
-		// 				$message = sprintf(
-		// 					__( "Invalid credentials for supplier %1\$s (%2\$s).<br>Check the configured secret keys.", "muifabrica_integration" ),
-		// 					$user_data[ "user" ],
-		// 					$user_id
-		// 				);
-		// 			break;
+			echo "<div class='notice notice-errror is-dismissible'><p>{$message}</p></div>";
+		}
+		elseif ( isset( $data[ "warnings" ] ) )
+		{
+			$message = sprintf(
+				__( "Não foi possível importar %1\$s produto(s)!<br>Verifique os logs para maiores detalhes.", "muifabrica_integration" ),
+				$data[ "warnings" ],
+			);
 
-		// 			default:
-		// 				$message = __( "Internal failure!", "muifabrica_integration" );
-		// 			break;
-		// 		}
+			echo "<div class='notice notice-warning is-dismissible'><p>{$message}</p></div>";
 
-		// 		echo "<div class='notice notice-errror is-dismissible'><p>{$message}</p></div>";
-		// 	}
-		// 	elseif ( $user_data[ "warnings" ] != 0 )
-		// 	{
-		// 		$message = sprintf(
-		// 			__( "Could not import/sync %1\$s products from supplier %2\$s (%3\$s)!<br>Check the logs for more details.", "muifabrica_integration" ),
-		// 			$user_data[ "warnings" ],
-		// 			$user_data[ "user"     ],
-		// 			$user_id
-		// 		);
+			if ( $data[ "count" ] != 0 )
+			{
+				$message = sprintf(
+					__( "%1\$s produto(s)! importados com sucesso!", "muifabrica_integration" ),
+					$data[ "count" ],
+				);
 
-		// 		echo "<div class='notice notice-warning is-dismissible'><p>{$message}</p></div>";
+				echo "<div class='notice notice-success is-dismissible'><p>{$message}</p></div>";
+			}
+		}
+		else
+		{
+			$count   = $data[ "count" ];
+			$message = __( "{$count} produtos importados com sucesso!", "muifabrica_integration" );
 
-		// 		$count   = array_sum( array_column( $data, "count" ) );
-
-		// 		if ( $count > 0 )
-		// 		{
-		// 			$message = __( "{$count} products successfully imported/synced!", "muifabrica_integration" );
-		// 			echo "<div class='notice notice-success is-dismissible'><p>{$message}</p></div>";
-		// 		}
-		// 	}
-		// 	else
-		// 	{
-		// 		$count   = array_sum( array_column( $data, "count" ) );
-		// 		$message = __( "{$count} products successfully imported/synced!", "muifabrica_integration" );
-
-		// 		echo "<div class='notice notice-success is-dismissible'><p>{$message}</p></div>";
-		// 	}
-		// }
+			echo "<div class='notice notice-success is-dismissible'><p>{$message}</p></div>";
+		}
 	}
 
 	/**
-	 * Save settings tab settings
+	 * Save settings tab settings.
 	 *
-	 * @since 	1.0.0
-	 * @return 	void
+	 * Handles the saving of settings for the settings tab in the WordPress admin.
+	 *
+	 * @since   1.0.0
+	 * @return  void
 	 */
 	public static function save_settings_tab() : void
 	{
@@ -510,12 +476,14 @@ class Muifabrica_Integration
 	}
 
 	/**
-	 * Allow unsafe URLs
+	 * Allow unsafe URLs.
 	 *
-	 * @since 	1.0.0
-	 * @param 	array 	$args
-	 * @param 	string 	$url
-	 * @return 	array
+	 * Modifies the request arguments to allow unsafe URLs.
+	 *
+	 * @since   1.0.0
+	 * @param   array   $args   The array of arguments for the request
+	 * @param   string  $url    The URL being requested
+	 * @return  array
 	 */
 	public function accept_unsafe_urls( $args, $url ) : array
 	{
