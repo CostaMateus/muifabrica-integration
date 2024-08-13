@@ -3,13 +3,13 @@
  * Products table class.
  *
  * @author 		Mateus Costa <mateus@costamateus.com.br>
- * @package 	Dropshipping_Shopkeeper\Classes\Tables
+ * @package 	Muifabrica_Integration\Classes\Tables
  * @version 	1.0.0
  */
 
-namespace Dropshipping_Shopkeeper\Classes\Tables;
+namespace Muifabrica_Integration\Classes\Tables;
 
-class DSM_Products_table extends \WP_List_Table
+class MFI_Products_table extends \WP_List_Table
 {
     /**
      * Products data

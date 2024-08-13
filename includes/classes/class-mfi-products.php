@@ -3,13 +3,13 @@
  * Products class.
  *
  * @author 		Mateus Costa <mateus@costamateus.com.br>
- * @package 	Dropshipping_Shopkeeper\Classes
+ * @package 	Muifabrica_Integration\Classes
  * @version 	1.0.0
  */
 
-namespace Dropshipping_Shopkeeper\Classes;
+namespace Muifabrica_Integration\Classes;
 
-class DSM_Products
+class MFI_Products
 {
     /**
      * Constructor
@@ -19,8 +19,8 @@ class DSM_Products
      */
     public function __construct()
     {
-		add_filter( "manage_edit-product_columns",        [ $this, "add_column_title_supplier"   ], 10, 1 );
-		add_filter( "manage_product_posts_custom_column", [ $this, "add_column_content_supplier" ], 10, 2 );
+		// add_filter( "manage_edit-product_columns",        [ $this, "add_column_title_supplier"   ], 10, 1 );
+		// add_filter( "manage_product_posts_custom_column", [ $this, "add_column_content_supplier" ], 10, 2 );
     }
 
 	/**
@@ -39,7 +39,7 @@ class DSM_Products
 			$new_columns[ $column_name ] = $column_info;
 
 			if ( "product_cat" === $column_name )
-				$new_columns[ \Dropshipping_Shopkeeper::DOMAIN . "_supplier" ] = __( "Supplier", "woo_ds_shopkeeper" );
+				$new_columns[ \Muifabrica_Integration::DOMAIN . "_supplier" ] = __( "Supplier", "woo_ds_shopkeeper" );
 		}
 
 		return $new_columns;
@@ -55,7 +55,7 @@ class DSM_Products
 	 */
 	public function add_column_content_supplier( $column, $product_id ) : void
 	{
-		if ( $column === \Dropshipping_Shopkeeper::DOMAIN . "_supplier" )
+		if ( $column === \Muifabrica_Integration::DOMAIN . "_supplier" )
 		{
 			$product     = wc_get_product( $product_id );
 			$supplier_id = $product->get_meta( "_dsm_supplier" );
