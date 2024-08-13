@@ -349,43 +349,34 @@ class MFI_Helper
     }
 
     /**
-     * TODO rever uso da func
-     *
      * Create a new product in WooCommerce.
      *
-     * This function creates a new product in WooCommerce based on the provided product data, prefix, and user ID.
-     * It translates the product data, creates the product using the WooCommerce API, and creates variations if the product is variable.
+     * This function creates a new product in WooCommerce based on the provided product data array and SKU prefixes.
+     * It performs several actions including translating the product data into a format suitable for WooCommerce,
+     * sending a request to the WooCommerce API to create the product, processing the product metadata, and creating variations if applicable.
      *
-	 * @since 	1.0.0
-     * @param   array   $product    The product data array.
-     * @param   string  $prefix     The prefix for the product SKU.
-     * @param   int     $user_id    The supplier user ID.
-     * @return  bool    True if the product was created successfully, false otherwise.
+     * @since   1.0.0
+     * @param   array   $product    The associative array containing the product data to be created.
+     * @param   array   $prefixes   An associative array with 'parent' and 'child' keys used as prefixes for the product SKU.
+     * @return  bool                Returns true if the product was created successfully, otherwise returns false.
      */
-    public static function create_product( array $product, string $prefix, int $user_id ) : bool
+    public static function create_product( array $product, array $prefixes ) : bool
     {
         // Translate the product data.
-        $t_product                  = self::translate_product( $product );
-
-        // Prepare the product data for creating the product.
-        $t_product[ "sku"       ]   = $prefix . $t_product[ "sku" ];
-        $t_product[ "meta_data" ][] = [
-            "key"   => "_dsm_supplier",
-            "value" => $user_id,
-        ];
+        $t_product        = self::translate_product( $product, $prefixes[ "parent" ] );
 
         // Create a new WP_REST_Request for creating the product.
-        $product_request            = new \WP_REST_Request( "POST", "/wc/v3/products" );
+        $product_request  = new \WP_REST_Request( "POST", "/wc/v3/products" );
         $product_request->set_body_params( $t_product );
 
         // Send the request to create the product.
-        $product_response           = rest_do_request( $product_request )->get_data();
+        $product_response = rest_do_request( $product_request )->get_data();
 
         // Check if there was an error creating the product.
         if ( is_wp_error( $product_response ) )
         {
             // Log the error message.
-            \Muifabrica_Integration::log( "error", "Supplier ID {$user_id} - error_create_product - " . $product_response->get_error_message(), true );
+            \Muifabrica_Integration::log( "error", "error_create_product - " . $product_response->get_error_message(), true );
             \Muifabrica_Integration::log( "info", print_r( $product_response, true ), true );
 
             return false;
@@ -394,71 +385,50 @@ class MFI_Helper
         // Process the product metadata.
         self::process_product_metadata( $product_response[ "id" ], $t_product[ "meta_data" ] );
 
-        // If the product is a variable product, create variations.
-        if ( $product[ "type" ] == "variable" )
+        self::create_all_product_variations( $product_response[ "id" ] );
+
+        $wc_product    = wc_get_product( $product_response[ "id" ] );
+        $variations_id = $wc_product->get_children();
+
+        foreach ( $variations_id as $variation_id )
         {
-            self::create_all_product_variations( $product_response[ "id" ] );
+            $has_change   = false;
 
-            $product       = wc_get_product( $product_response[ "id" ] );
-            $variations_id = $product->get_children();
+            $variation    = wc_get_product( $variation_id );
+            $v_attributes = $variation->get_attributes();
 
-            foreach ( $variations_id as $variation_id )
+            $t_variation  = self::find_variation( $t_product[ "variations" ], $v_attributes );
+
+            if ( $t_variation )
             {
-                $variation  = wc_get_product( $variation_id );
-
-                $attributes = $variation->get_attributes();
-
-                $has_change = false;
-
-                foreach ( $t_product[ "variations" ] as $t_variation )
+                if ( $variation->get_sku() != $t_variation[ "sku" ] )
                 {
-                    $aux_attrs = array_combine(
-                        array_map(
-                            function ( $key ) { return str_replace( "attribute_", "", $key ); },
-                            array_keys( $t_variation[ "attributes" ] )
-                        ),
-                        array_values( $t_variation[ "attributes" ] )
-                    );
-
-                    $all_equal = count( array_intersect_assoc( $attributes, $aux_attrs ) ) === count( $attributes );
-
-                    if ( $all_equal )
-                    {
-                        if ( $variation->get_sku() != $t_variation[ "sku" ] )
-                        {
-                            $variation->set_sku( $prefix . $t_variation[ "sku" ] );
-                            $variation->update_meta_data( "_dsm_supplier_sku", $t_variation[ "sku" ] );
-                        }
-
-                        $variation->update_meta_data( "_dsm_supplier", $user_id );
-
-                        $variation->set_regular_price( ( string ) $t_variation[ "display_regular_price" ] );
-                        $variation->set_sale_price( ( string ) $t_variation[ "display_price" ] );
-
-                        $variation->set_manage_stock( $t_variation[ "manage_stock" ] );
-                        $variation->set_stock_quantity( $t_variation[ "max_qty" ] );
-
-                        $variation->set_weight( $t_variation[ "weight"     ]             );
-                        $variation->set_length( $t_variation[ "dimensions" ][ "length" ] );
-                        $variation->set_width(  $t_variation[ "dimensions" ][ "width"  ] );
-                        $variation->set_height( $t_variation[ "dimensions" ][ "height" ] );
-
-                        $images   = $product_response[ "images" ];
-                        $index    = array_search( $t_variation[ "image" ][ "title" ], array_column( $images, "name" ) );
-
-                        $image_id = ( $index !== false )
-                                    ? $images[ $index ][ "id" ]
-                                    : self::upload_file_by_url( $t_variation[ "image" ][ "url" ], $variation_id );
-
-                        if ( $image_id ) $variation->set_image_id( $image_id );
-
-                        $has_change = true;
-                        break;
-                    }
+                    $variation->set_sku( $prefixes[ "child" ] . $t_variation[ "sku" ] );
+                    $variation->update_meta_data( "_mfi_supplier_sku", $t_variation[ "sku" ] );
                 }
 
-                if ( $has_change ) $variation->save();
+                $variation->update_meta_data( "_mfi_supplied", "yes" );
+
+                $variation->set_regular_price( ( string ) $t_variation[ "regular_price" ] );
+                $variation->set_sale_price( ( string ) $t_variation[ "sale_price" ] );
+
+                $variation->set_manage_stock( $t_variation[ "manage_stock" ] );
+                $variation->set_stock_quantity( $t_variation[ "stock_quantity" ] );
+
+                $variation->set_weight( $t_variation[ "weight"     ]             );
+                $variation->set_length( $t_variation[ "dimensions" ][ "length" ] );
+                $variation->set_width(  $t_variation[ "dimensions" ][ "width"  ] );
+                $variation->set_height( $t_variation[ "dimensions" ][ "height" ] );
+
+                $image_id = self::upload_file_by_url( $t_variation[ "image" ][ "url" ], $variation_id );
+
+                if ( $image_id ) $variation->set_image_id( $image_id );
+
+                $has_change = true;
             }
+
+            if ( $has_change )
+                $variation->save();
         }
 
         return true;
