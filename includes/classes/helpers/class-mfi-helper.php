@@ -14,167 +14,125 @@ namespace Muifabrica_Integration\Classes\Helpers;
 class MFI_Helper
 {
     /**
-     * TODO rever uso da func
-     *
      * Translate product data into a format suitable for WooCommerce API.
      *
-     * This function takes an array of product data and transforms it into a format that can be sent to the WooCommerce API.
-     * It removes unnecessary fields, creates categories, sets the product status to "draft", and formats attributes and metadata.
+     * This function transforms a given array of product data into a structure that is compatible with the WooCommerce API.
+     * It handles tasks such as removing unnecessary fields, creating categories, setting the product status to "draft,"
+     * and formatting attributes, images, variations, and metadata.
      *
      * @since   1.0.0
-     * @param   array   $product    The product data array.
-     * @return  array               The transformed product data array.
+     * @param   array   $product    The array of product data to be transformed.
+     * @param   string  $prefix     The prefix to be used for the product SKU.
+     * @return  array               The transformed product data array suitable for the WooCommerce API.
      */
-    public static function translate_product( array $product ) : array
+    public static function translate_product( array $product, string $prefix ) : array
     {
-        $categories = [];
-
-        // Remove the "id" field from the product data..
-        unset( $product[ "id" ] );
-
-        // Loop through the product images and remove unnecessary fields.
-        foreach( $product[ "images" ] as &$image )
-            foreach ( $image as $key => $value )
-                if ( !in_array( $key, [ "alt", "src", "name" ] ) )
-                    unset( $image[ $key ] );
-
-        // Check if general categories should be created.
-        // And loop through the product categories and create or find them.
-        if ( get_option( "_dsm_categories_general" ) )
-            foreach ( $product[ "categories" ] as $category )
-                $categories[] = self::find_or_create_category( $category[ "name" ], $category[ "slug" ] );
-
-        // Set the product categories and status.
-        $product[ "categories" ] = $categories;
-        $product[ "status"     ] = "draft";
-
-        // Format the product attributes.
-        foreach ( $product[ "attributes" ] as $key => $attribute )
-        {
-            $product[ "attributes" ][ $key ] = [
-                "name"      => ucfirst( strtolower( $attribute[ "name" ] ) ),
-                "position"  => $attribute[ "position"  ],
-                "visible"   => $attribute[ "visible"   ],
-                "variation" => $attribute[ "variation" ],
-                "options"   => $attribute[ "options"   ],
-            ];
-        }
-
-        // Set the product metadata.
-        $product[ "meta_data" ] = [
+        $images       = [];
+        $attributes   = [];
+        $combinations = [];
+        $variations   = [];
+        $categories[] = self::find_or_create_category( $product[ "cate_name_pt" ] );
+        $metadatas    = [
             [
-                "key"   => "_dsm_supplier_regular_price",
-                "value" => $product[ "regular_price" ],
+                "key"   => "_mfi_regular_price",
+                "value" => $product[ "price" ], // ot_price
             ], [
-                "key"   => "_dsm_supplier_sale_price",
-                "value" => $product[ "sale_price"    ],
+                "key"   => "_mfi_sale_price",
+                "value" => $product[ "price" ], // ot_price
             ], [
-                "key"   => "_dsm_supplier_sku",
-                "value" => $product[ "sku"           ],
-            ], [
-                "key"   => "_dsm_supplier_status_regular",
+                "key"   => "_mfi_status_regular",
                 "value" => "even",
             ], [
-                "key"   => "_dsm_supplier_status_sale",
+                "key"   => "_mfi_status_sale",
                 "value" => "even",
+            ], [
+                "key"   => "_mfi_supplied",
+                "value" => "yes",
             ],
         ];
 
-        return $product;
-    }
+        $short        = strip_tags( $product[ "description_pt" ] );
+        $short        = strip_tags( $short );
+        $short        = substr( $short, 0, 150 );
+        $short        = rtrim( $short ) . "...";
 
-    /**
-     * TODO rever uso da func
-     *
-     * Translate variation data into a format suitable for WooCommerce API.
-     *
-     * This function takes an array of variation data, along with images, SKU, SKU prefix, and product ID.
-     * It formats the variations to be sent to the WooCommerce API, including assigning images, formatting attributes, and metadata.
-     *
-     * @since   1.0.0
-     * @param   array   $variations     The array of variation data.
-     * @param   array   $images         The array of product images.
-     * @param   string  $sku            The product SKU.
-     * @param   string  $sku_prefix     The SKU prefix.
-     * @param   int     $product_id     The product ID.
-     * @return  array                   The transformed variation data array.
-     */
-    public static function translate_variations( array $variations, array $images, string $sku, string $sku_prefix, int $product_id ) : array
-    {
-        $counter = 1;
+        $slug         = sanitize_title( $product[ "store_name_pt" ] );
 
-        foreach ( $variations as &$variation )
+        // Images
+        foreach ( $product[ "slider_image" ] as $image )
         {
-            // Set the parent ID, description, and regular price for the variation.
-            $variation[ "parent_id"     ] = $product_id;
-            $variation[ "description"   ] = $variation[ "variation_description" ];
-            $variation[ "regular_price" ] = ( string ) $variation[ "display_regular_price" ];
-
-            // Find the image for the variation or set a new one.
-            $index = array_search( $variation[ "image" ][ "title" ], array_column( $images, "name" ) );
-
-            if ( $index !== false )
-            {
-                $variation[ "image" ] = [
-                    "id" => $images[ $index ][ "id" ]
-                ];
-            }
-            else
-            {
-                $variation[ "image" ] = [
-                    "alt"  => $variation[ "image" ][ "alt"   ],
-                    "name" => $variation[ "image" ][ "title" ],
-                    "src"  => $variation[ "image" ][ "url"   ],
-                ];
-            }
-
-            // Remove unnecessary fields from the variation data.
-            unset(
-                $variation[ "variation_id"          ],
-                $variation[ "variation_description" ],
-                $variation[ "display_regular_price" ]
-            );
-
-            // Format the variation attributes.
-            foreach ( $variation[ "attributes" ] as $key => $attribute )
-            {
-                unset( $variation[ "attributes" ][ $key ] );
-
-                $variation[ "attributes" ][] = [
-                    "name"   => ucfirst( strtolower( $key       ) ),
-                    "option" => ucfirst( strtolower( $attribute ) )
-                ];
-            }
-
-            // Set the variation metadata.
-            $variation[ "meta_data" ] = [
-                [
-                    "key"   => "_dsm_supplier_regular_price",
-                    "value" => $variation[ "regular_price" ],
-                ], [
-                    "key"   => "_dsm_supplier_sale_price",
-                    "value" => $variation[ "sale_price"    ] ?? "",
-                ], [
-                    "key"   => "_dsm_supplier_sku",
-                    "value" => $variation[ "sku"           ],
-                ], [
-                    "key"   => "_dsm_supplier_status_regular",
-                    "value" => "even",
-                ], [
-                    "key"   => "_dsm_supplier_status_sale",
-                    "value" => "even",
-                ],
+            $images[] = [
+                "src"  => $image,
+                "name" => "",
+                "alt"  => "",
             ];
-
-            // Update the variation SKU if it matches the product SKU or SKU prefix.
-            if ( in_array( $variation[ "sku" ], [ $sku, "{$sku_prefix}{$sku}" ] ) )
-            {
-                $variation[ "sku" ] = "{$sku_prefix}{$sku}{$counter}";
-                $counter++;
-            }
         }
 
-        return $variations;
+        // Attributes and default
+        foreach ( $product[ "items" ] as $i => $attr )
+        {
+            $attributes[] = [
+                "name"      => $attr[ "value_pt"  ],
+                "position"  => 1,
+                "visible"   => true,
+                "variation" => true,
+                "options"   => $attr[ "detail_pt" ],
+            ];
+        }
+
+        $combinations = self::combine_attributes( $attributes );
+
+        // Variations
+        foreach ( $product[ "attrs" ] as $variation )
+        {
+            $aux_attrs    = self::find_combination( $combinations, $variation[ "suk_pt" ] );
+
+            $variations[] = [
+                "description"    => "",
+                "sku"            => $variation[ "unique" ],
+                "regular_price"  => $variation[ "price"  ],
+                "sale_price"     => $variation[ "price"  ],
+                "status"         => "publish",
+                "manage_stock"   => true,
+                "stock_quantity" => $variation[ "stock" ],
+                "stock_status"   => $variation[ "stock" ] > 0 ? "instock" : "outofstock",
+                "weight"         => $variation[ "weight" ],
+                "dimensions"     => [
+                    "length" => $variation[ "length" ],
+                    "width"  => $variation[ "width"  ],
+                    "height" => $variation[ "height" ],
+                ],
+                "image"          => [
+                    "src"    => $variation[ "pic" ],
+                    "name"   => "",
+                    "alt"    => "",
+                ],
+                "attributes"     => $aux_attrs,
+            ];
+        }
+
+        return [
+            "name"               => $product[ "store_name_pt"  ],
+            "slug"               => $slug,
+            "type"               => "variable",
+            "status"             => "draft",
+            "feature"            => false,
+            "catalog_visibility" => "visible",
+            "description"        => $product[ "description_pt" ],
+            "short_description"  => $short,
+            "sku"                => $prefix . $product[ "attrs" ][ 0 ][ "unique" ],
+            "regular_price"      => $product[ "price"          ], // or ot_price
+            "sale_price"         => $product[ "price"          ], // or ot_price
+            "virtual"            => $product[ "is_virtual"     ],
+            "manage_stock"       => true,
+            "stock_quantity"     => $product[ "stock"          ],
+            "stock_status"       => $product[ "stock"          ] > 0 ? "instock" : "outofstock",
+            "categories"         => $categories,
+            "images"             => $images,
+            "attributes"         => $attributes,
+            "variations"         => $variations,
+            "meta_data"          => $metadatas
+        ];
     }
 
     /**
