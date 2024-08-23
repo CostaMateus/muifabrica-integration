@@ -19,6 +19,12 @@ $pv_table = new MFI_Preview_Table();
 <section>
 	<div class="wrap-mfi" id="mfi-preview-products-list-table" >
 
+		<p>
+			<strong>Cotação do dólar:</strong>
+			R$ <?php echo ( new \Muifabrica_Integration\Api\Muifabrica_Api() )->get_dollar_price(); ?>
+			<small>(Atualizado a cada 15 minutos)</small>
+		</p>
+
 		<form id="mfi-preview_products-list-table-form" method="post" >
 			<?php
 				$page  = htmlspecialchars( $_POST[ "page" ] ?? "" );
