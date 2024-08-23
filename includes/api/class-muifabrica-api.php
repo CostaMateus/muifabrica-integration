@@ -176,6 +176,51 @@ class Muifabrica_Api
     }
 
 	/**
+	 * Retrives the current dollar price in Brazilliasn Real (BRL) from the Awesome API.
+	 *
+	 * @return 	float|false 	The current dollar price or false.
+	 */
+	public function get_dollar_price() : float|false
+	{
+		$dollar = get_transient( "_mfi_dollar" );
+
+		if ( $dollar !== false )
+			return $dollar;
+
+        try
+        {
+			$url           = "https://economia.awesomeapi.com.br/last/USD-BRL";
+            $response      = wp_remote_get( $url );
+
+            $response_body = $this->handle_api_response( $response, $url, [], "get_dollar_price" );
+
+            if ( !$response_body )
+				return false;
+
+			$dollar        = $response_body[ "USDBRL" ][ "bid" ];
+			$dollar        = number_format( ( float ) $dollar, 2, ".", "" );
+
+			set_transient( "_mfi_dollar", $dollar, ( 15 * MINUTE_IN_SECONDS ) );
+
+			return $dollar;
+        }
+        catch ( Exception $e )
+        {
+            $this->log( "critical", [
+                "success"  => 0,
+                "function" => "get_dollar_price",
+                "code"     => 500,
+                "message"  => $e->getMessage(),
+                "url"      => $url,
+                "args"     => $args,
+                "response" => null,
+            ], true );
+
+            return false;
+        }
+	}
+
+	/**
 	 * Generate token for use in Webhook API calls.
 	 *
 	 * @since 	1.0.0
@@ -528,5 +573,34 @@ class Muifabrica_Api
 		}
 
 		return $products;
+	}
+
+	public function post_order()
+	{
+        $base_url   = $this->get_base_url();
+        $url        = "{$base_url}/" . $this->urls[ "product" ][ "list" ];
+
+        list( $app_id, $app_sc ) = $this->get_app_credentials();
+
+		if ( empty( $app_id ) || empty( $app_sc ) )
+		{
+			$this->log( "error", [
+				"success"  => 0, // false
+				"function" => "get_products",
+				"code"     => 500,
+				"message"  => "Missing app_id or app_secret",
+				"url"      => $url,
+				"args"     => [ $this->env, $app_id, $app_sc ],
+				"response" => null,
+			], true );
+
+			return false;
+		}
+
+		$token      = $this->get_token();
+
+		if ( $token === false )
+			return false;
+
 	}
 }
