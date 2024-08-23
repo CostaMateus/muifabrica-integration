@@ -51,6 +51,22 @@ $_app_secret_descr     = __( "App Secret do ambiente real (produção).",       
 
 			<table class="form-table" >
 				<tbody>
+					<!-- dollar -->
+					<tr valign="top" >
+						<th scope="row" class="titledesc" >
+							<label for="mfi_env_api" >
+								Cotação do dólar
+							</label>
+						</th>
+						<td class="forminp" >
+							<?php echo "R$ " . ( new \Muifabrica_Integration\Api\Muifabrica_Api() )->get_dollar_price(); ?>
+
+							<p class="description" >
+								Atualizado a cada 15 minutos
+							</p>
+						</td>
+					</tr>
+
 					<!-- on/off homol -->
 					<tr valign="top" >
 						<th scope="row" class="titledesc" >
