@@ -178,9 +178,9 @@ class Muifabrica_Api
 	/**
 	 * Retrives the current dollar price in Brazilliasn Real (BRL) from the Awesome API.
 	 *
-	 * @return 	float|false 	The current dollar price or false.
+	 * @return 	string|false 	The current dollar price or false.
 	 */
-	public function get_dollar_price() : float|false
+	public function get_dollar_price() : string|false
 	{
 		$dollar = get_transient( "_mfi_dollar" );
 
