@@ -198,7 +198,7 @@ class Muifabrica_Api
 				return false;
 
 			$dollar        = $response_body[ "USDBRL" ][ "bid" ];
-			$dollar        = number_format( ( float ) $dollar, 2, ".", "" );
+			$dollar        = number_format( ( float ) $dollar, 2, ",", "" );
 
 			set_transient( "_mfi_dollar", $dollar, ( 15 * MINUTE_IN_SECONDS ) );
 
