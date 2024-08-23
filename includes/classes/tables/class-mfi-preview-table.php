@@ -434,7 +434,6 @@ class MFI_Preview_Table extends \WP_List_Table
      * Extra Table Navigation.
      *
      * This function allows the addition of extra controls or content at the top or bottom of the table.
-     * Currently, this function is not being used, but it is available for future customization.
      *
      * @since   1.0.0
      * @param   string  $which  Indicates whether the current position is "top" or "bottom" of the table.
@@ -442,7 +441,13 @@ class MFI_Preview_Table extends \WP_List_Table
      */
     public function extra_tablenav( $which ) : void
     {
-        // if ( $which == "top"    )
+        if ( $which == "top" )
+        {
+            $dollar = $this->api->get_dollar_price();;
+
+            echo "<p class='mfi-my-0' ><strong>Cotação do dólar:</strong> R$ {$dollar} <small>(Atualizado a cada 15 minutos)</small></p>";
+        }
+
         // if ( $which == "bottom" )
     }
 

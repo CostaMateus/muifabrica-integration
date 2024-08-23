@@ -9,6 +9,7 @@
 
 namespace Muifabrica_Integration\Classes\Tables;
 
+use Muifabrica_Integration\Api\Muifabrica_Api;
 use Muifabrica_Integration\Classes\Helpers\MFI_Helper;
 
 class MFI_Product_Table extends \WP_List_Table
@@ -506,16 +507,29 @@ class MFI_Product_Table extends \WP_List_Table
     }
 
     /**
-     * Extra table navigation.
+     * Extra Table Navigation.
      *
-     * This function is a placeholder for adding extra content before or after the table.
+     * This function allows the addition of extra controls or content at the top or bottom of the table.
      *
      * @since   1.0.0
+     * @param   string  $which  Indicates whether the current position is "top" or "bottom" of the table.
      * @return  void
      */
     public function extra_tablenav( $which ) : void
     {
-        // if ( $which == "top"    )
+        if ( $which == "top" )
+        {
+            $dollar = ( new Muifabrica_Api() )->get_dollar_price();;
+
+            echo "<div class='mfi-mb-9 mfi-float-left' >
+                    <p class='mfi-my-5' >
+                        <strong>Cotação do dólar:</strong>
+                        R$ {$dollar}
+                        <small>(Atualizado a cada 15 minutos)</small>
+                    </p>
+                </div>";
+        }
+
         // if ( $which == "bottom" )
     }
 }
