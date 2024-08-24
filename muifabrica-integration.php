@@ -80,8 +80,11 @@ class Muifabrica_Integration
             }
         }
 
-        if ( $has_missing                  ) return;
-		if ( class_exists( "WooCommerce" ) ) add_action( "before_woocommerce_init", [ $this, "setup_hpos_compatibility" ] );
+        if ( $has_missing )
+			return;
+
+		if ( class_exists( "WooCommerce" ) )
+			add_action( "before_woocommerce_init", [ $this, "setup_hpos_compatibility" ] );
 
 		$this->add_requires();
         $this->add_actions();
@@ -172,6 +175,10 @@ class Muifabrica_Integration
 		// require_once( self::DIR . "/includes/rest-api/Server.php"                   );
 
 		require_once( self::DIR . "/includes/api/class-muifabrica-api.php" );
+
+		// Shipping classes
+		require_once( self::DIR . "/includes/classes/shipping/class-mfi-air-shipping.php" );
+		require_once( self::DIR . "/includes/classes/shipping/class-mfi-sea-shipping.php" );
 	}
 
 	/**
@@ -184,12 +191,13 @@ class Muifabrica_Integration
     {
 		// TODO rever inicialização da REST API
 		// add_action( "init",                        [ $this, "load_rest_api"            ]     );
-        add_action( "init",                         [ $this, "add_custom_order_status" ]     );
 
-		add_action( "admin_menu",                   [ $this, "add_admin_menu"          ], 9  );
-        add_action( "admin_enqueue_scripts",        [ $this, "add_admin_style_script"  ]     );
+        add_action( "init",                         [ $this, "add_custom_shipping_class" ]     );
 
-		add_action( "admin_post_mfi_save_settings", [ $this, "save_settings_tab"       ]     );
+		add_action( "admin_menu",                   [ $this, "add_admin_menu"            ], 9  );
+        add_action( "admin_enqueue_scripts",        [ $this, "add_admin_style_script"    ]     );
+
+		add_action( "admin_post_mfi_save_settings", [ $this, "save_settings_tab"         ]     );
     }
 
 	/**
@@ -200,8 +208,10 @@ class Muifabrica_Integration
 	 */
     public function add_filters() : void
     {
-		add_filter( "plugin_action_links_" . plugin_basename( self::FILE ), [ $this, "plugin_action_links" ]        );
-		add_filter( "http_request_args",                                    [ $this, "accept_unsafe_urls"  ], 90, 2 );
+		add_filter( "plugin_action_links_" . plugin_basename( self::FILE ), [ $this, "plugin_action_links"  ]        );
+		add_filter( "http_request_args",                                    [ $this, "accept_unsafe_urls"   ], 90, 2 );
+
+		add_filter( "woocommerce_shipping_methods",                         [ $this, "add_shippings_method" ]        );
 	}
 
 	/**
@@ -221,20 +231,11 @@ class Muifabrica_Integration
 
 		// Products, already imported
 		require_once( self::DIR . "/includes/classes/tables/class-mfi-products-table.php" );
-		require_once( self::DIR . "/includes/classes/class-mfi-products.php"              );
-		new Muifabrica_Integration\Classes\MFI_Products();
 
+		// Orders
 		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-orders-table.php"   );
-		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-users-table.php"    );
-
-		// require_once( self::DIR . "/includes/classes/class-woo-mfi-orders.php"                );
-		// require_once( self::DIR . "/includes/classes/class-woo-mfi-tags.php"                  );
-		// require_once( self::DIR . "/includes/classes/class-woo-mfi-users.php"                 );
-
-		// new Muifabrica_Integration\Classes\DSM_Orders();
-		// new Muifabrica_Integration\Classes\DSM_Tags();
-
-		require_once( self::DIR . "/includes/api/class-muifabrica-api.php" );
+		require_once( self::DIR . "/includes/classes/class-mfi-orders.php"                );
+		new Muifabrica_Integration\Classes\MFI_Orders();
 	}
 
 	/**
@@ -249,22 +250,45 @@ class Muifabrica_Integration
 	}
 
 	/**
-	 * Create the status 'wc-shipped'.
+	 * Create the shipping class.
 	 *
 	 * @since 	1.0.0
 	 * @return 	void
 	 */
-    public static function add_custom_order_status() : void
+    public static function add_custom_shipping_class() : void
     {
-		register_post_status( "wc-shipped", [
-			"label"                     => _x( "Shipped", "Order status", "muifabrica_integration" ),
-			"public"                    => true,
-			"exclude_from_search"       => false,
-			"show_in_admin_all_list"    => true,
-			"show_in_admin_status_list" => true,
-			"label_count"               => _n_noop( "Shipped <span class='count'>(%s)</span>", "Shipped <span class='count'>(%s)</span>" )
-		] );
+		$sc_name = "Entrega Muifabrica";
+
+		if ( !term_exists( $sc_name, "product_shipping_class" ) )
+		{
+			$sc_slug  = "muifabrica-shipping-class";
+			$sc_descr = "Classe de entrega Muifabrica";
+
+			wp_insert_term(
+				$sc_name,
+				"product_shipping_class",
+				[
+					"slug"        => $sc_slug,
+					"description" => $sc_descr,
+				]
+			);
+		}
     }
+
+	/**
+	 * Include Muifabrica shippings to WooCommerce.
+	 *
+     * @since   1.0.0
+	 * @param  	array $methods Default shipping methods.
+	 * @return 	array
+	 */
+	public static function add_shippings_method( $methods )
+	{
+        $methods[ "muifabrica-air-shipping" ] = "Muifabrica_Integration\Classes\Shipping\MFI_Air_Shipping";
+        $methods[ "muifabrica-sea-shipping" ] = "Muifabrica_Integration\Classes\Shipping\MFI_Sea_Shipping";
+
+		return $methods;
+	}
 
     /**
      * Add admin style.
