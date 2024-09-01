@@ -281,7 +281,7 @@ class Muifabrica_Api
 			$this->log( "info", [
 				"success"  => 1, // true
 				"function" => "generate_token",
-				"code"     => $status,
+				"code"     => wp_remote_retrieve_response_code( $response ),
 				"message"  => "Success",
 				"url"      => $url,
 				"args"     => $params,
@@ -295,7 +295,7 @@ class Muifabrica_Api
 			$this->log( "critical", [
 				"success"  => 0, // false
 				"function" => "generate_token",
-				"code"     => $status,
+				"code"     => $e->getCode(),
 				"message"  => $e->getMessage(),
 				"url"      => $url,
 				"args"     => array_merge( $args, $params ),
@@ -551,10 +551,10 @@ class Muifabrica_Api
 					$this->log( "critical", [
 						"success"  => 0, // false
 						"function" => "get_products",
-						"code"     => $status,
+						"code"     => $e->getCode(),
 						"message"  => $e->getMessage(),
 						"url"      => $full_url,
-						"args"     => array_merge( $args, $params ),
+						"args"     => $args,
 						"response" => $response ?? null,
 					], true );
 
@@ -575,7 +575,96 @@ class Muifabrica_Api
 		return $products;
 	}
 
-	public function post_order()
+	/**
+	 * Get the freight
+	 *
+	 * @since 	1.0.0
+	 * @param 	array 	$data
+	 * @return 	array|false
+	 */
+	public function get_freight( array $data ) : array|false
+	{
+        $base_url = $this->get_base_url();
+        $url      = "{$base_url}/" . $this->urls[ "freight" ];
+
+        list( $app_id, $app_sc ) = $this->get_app_credentials();
+
+		if ( empty( $app_id ) || empty( $app_sc ) )
+		{
+			$this->log( "error", [
+				"success"  => 0, // false
+				"function" => "get_freight",
+				"code"     => 500,
+				"message"  => "Missing app_id or app_secret",
+				"url"      => $url,
+				"args"     => [ $this->env, $app_id, $app_sc ],
+				"response" => null,
+			], true );
+
+			return false;
+		}
+
+		$token    = $this->get_token();
+
+		if ( $token === false )
+			return false;
+
+		$args     = [
+			"timeout"     => 60,
+			"data_format" => "body",
+			"body"        => wp_json_encode( $data ),
+			"headers"     => [
+				"Content-Type"   => "application/json",
+				"Authori-key"    => $app_sc,
+				"Authori-zation" => "Beare {$token}",
+			],
+		];
+
+		try
+		{
+			// Make API call
+			$response      = wp_remote_post( $url, $args );
+
+            $response_body = $this->handle_api_response( $response, $url, $args, "get_freight" );
+
+            if ( !$response_body )
+				return false;
+
+			// Log if debug enabled
+			$this->log( "info", [
+				"success"  => 1, // true
+				"function" => "get_freight",
+				"code"     => wp_remote_retrieve_response_code( $response ),
+				"message"  => "Success",
+				"url"      => $url,
+				"args"     => $args,
+				"response" => $response_body,
+			] );
+
+			return $response_body[ "data" ];
+		}
+		catch ( Exception $e )
+		{
+			$this->log( "critical", [
+				"success"  => 0, // false
+				"function" => "get_freight",
+				"code"     => $e->getCode(),
+				"message"  => $e->getMessage(),
+				"url"      => $url,
+				"args"     => $args,
+				"response" => $response ?? null,
+			], true );
+
+			return false;
+		}
+	}
+
+	/**
+	 * Undocumented function
+	 *
+	 * @return 	void
+	 */
+	public function post_order() : false
 	{
         $base_url   = $this->get_base_url();
         $url        = "{$base_url}/" . $this->urls[ "product" ][ "list" ];
