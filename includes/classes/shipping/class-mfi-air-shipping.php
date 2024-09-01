@@ -9,7 +9,6 @@
 namespace Muifabrica_Integration\Classes\Shipping;
 
 use Muifabrica_Integration\Api\Muifabrica_Api;
-use Muifabrica_Integration\Classes\Helpers\MFI_Helper;
 
 defined( "ABSPATH" ) || exit;
 
@@ -128,7 +127,7 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
      * @param   array   $package    Cart package.
      * @return  bool
      */
-    protected function check_shipping_class( $package )
+    protected function check_shipping_class( $package ) : bool
     {
         $only_selected = true;
 
@@ -151,185 +150,75 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
     }
 
     /**
-     * TODO
-     * calculate_shipping function.
+     * Calculates the shipping coast for a given package.
      *
      * @since   1.0.0
-     * @param   mixed   $package
+     * @param   mixed   $package    The package details including destination and items.
      * @return  void
      */
-    public function calculate_shipping( $package = [] )
+    public function calculate_shipping( $package = [] ) : void
     {
-        // Check if valid to be calculeted
+        // Check if the destination postcode is valid and the country is Brazil.
         if ( "" === $package[ "destination" ][ "postcode" ] || "BR" !== $package[ "destination" ][ "country" ] )
             return;
 
-        // Check if complete postcode
+        // Check if the postcode length is valid (between 8 and 9 characters).
         $postcode = strlen( $package[ "destination" ][ "postcode" ] );
         if ( $postcode < 8 || $postcode > 9 )
             return;
 
-        // Check for shipping classes.
+        // Check if the package has valid shipping classes.
         if ( !$this->check_shipping_class( $package ) )
             return;
 
-        $this->add_rate( [
-            "label"    => $this->title,
-            "cost"     => rand( 1, 100 ),
-            "calc_tax" => "per_item"
-        ] );
+        // Get the shipping rate for the package.
+        $shipping = $this->get_rate( $package );
 
-        // // executa a consulta a api
-        // $shipping = $this->get_rate( $package );
+        // If no shipping rate is found, log an error and return.
+        if ( !$shipping )
+        {
+            \Muifabrica_Integration::log( "error", "calculate_shipping", true );
+            return;
+        }
 
-        // if ( $shipping[ "errorCode" ] )
-        // {
-        //     \Muifabrica_Integration::log( "error", print_r( [ "calculate_shipping_error", $shipping ], true ), true );
-        //     return;
-        // }
+        // Get the current dollar price from the API.
+        $dollar   = $this->api->get_dollar_price();
+        $costs    = 0;
 
-        // $meta  = [];
-        // $costs = [];
-        // $time  = 0;
+        // Calculate the total shipping cost.
+        foreach ( $shipping as $i => $value )
+            $costs += ( float ) $value;
 
-        // foreach ( $shipping[ "data" ] as $data )
-        // {
-        //     if ( $data[ "errorCode" ] ) return;
+        // Prepare metadata for the shipping rate.
+        $meta[ "price"   ] = $costs * $dollar;
+        $meta[ "company" ] = "Muifabrica";
 
-        //     $item         = $data[ "data" ];
-        //     $id           = $item[ "product_id" ];
-        //     $costs[ $id ] = ( float ) $item[ "deliveryPrice" ];
-        //     $time         = ( $item[ "deliveryTime" ] > $time ) ? $item[ "deliveryTime" ] : $time;
-        // }
+        // Create the shipping rate array.
+        $rate = [
+            "id"        => $this->id . $this->instance_id,
+            "label"     => $this->title,
+            "cost"      => $costs * $dollar,
+            "calc_tax"  => "per_item",
+            "meta_data" => $meta,
+            "package"   => $package
+        ];
 
-        // $meta[ "price"   ] = $costs;
-        // $meta[ "company" ] = "Muifabrica";
-
-        // // Create the rate
-        // $rate = [
-        //     "id"        => $this->id . $this->instance_id,
-        //     "label"     => $this->title,
-        //     "cost"      => 100, // $costs,
-        //     "calc_tax"  => "per_item",
-        //     "meta_data" => [], // $meta,
-        //     "package"   => [], // $package
-        // ];
-
-        // // Register the rate
-        // $this->add_rate( $rate );
+        // Register the rate
+        $this->add_rate( $rate );
     }
 
 	/**
-     * TODO
 	 * Get shipping rate.
 	 *
      * @since   1.0.0
 	 * @param   array   $package    Cart package.
-	 * @return  array
+	 * @return  array|false
 	 */
-	protected function get_rate( $package )
+	protected function get_rate( $package ) : array|false
     {
-        $body     = $this->process_package( $package );
-        $shipping = $this->api->fs_freight_calculation( $body )[ "data" ];
+        $body = $this->process_package( $package );
 
-        foreach ( $shipping[ "data" ] as $sku => &$data )
-        {
-            $id      = wc_get_product_id_by_sku( $sku );
-            $product = wc_get_product( $id );
-            $data[ "data" ][ "product_id" ] = $id;
-
-            $code    = $data[ "errorCode" ];
-            $item    = $data[ "data"      ];
-
-            $fs_undf = $this->api->env() ? 1    : 4744;
-
-            $fs_     = $this->api->env() ? 4453 : 3970;
-            $fs_05   = $this->api->env() ? 4454 : 4309;
-            $fs_14   = $this->api->env() ? 4451 : 4310;
-            $fs_33   = $this->api->env() ? 4345 : 4311;
-
-            $fs_4e   = $this->api->env() ? 1    : 4740;
-            $fs_25   = $this->api->env() ? 1    : 4741;
-            $fs_60   = $this->api->env() ? 1    : 4742;
-            $fs_61   = $this->api->env() ? 1    : 4743;
-
-            $fs_19   = $this->api->env() ? 1    : 4745;
-            $fs_74   = $this->api->env() ? 1    : 4746;
-
-            $fs_3e   = $this->api->env() ? 1    : 4747;
-
-            $fs_97   = $this->api->env() ? 1    : 4759;
-
-            $fs_83   = $this->api->env() ? 1    : 4776;
-
-            if ( in_array( $code, [ 4001, 4002 ] ) )
-            {
-                $product->set_stock_quantity( 0 );
-                $product->set_stock_status( "outofstock" );
-                $product->update_meta_data( "_fastshop_hub", "-" );
-                $product->set_shipping_class_id( $fs_ );
-            }
-            else if ( $code == 4000 )
-            {
-                $stock   = $item[ "stock" ];
-                $product->set_stock_quantity( $stock );
-
-                $status  = ( $stock > 0 ) ? "instock" : "outofstock";
-                $product->set_stock_status( $status );
-
-                $product->update_meta_data( "_fastshop_hub", "-" );
-                $product->set_shipping_class_id( $fs_ );
-            }
-            else
-            {
-                $stock   = $item[ "stock" ];
-                $product->set_stock_quantity( $stock );
-
-                $status  = ( $stock > 0 ) ? "instock" : "outofstock";
-                $product->set_stock_status( $status );
-
-                $hub     = !empty( $item[ "hub" ] ) ? $item[ "hub" ] : "-";
-                $product->update_meta_data( "_fastshop_hub", $hub );
-
-                if ( $hub != "-" )
-                {
-                    $last_p  = explode( "_", $hub )[ 2 ];
-
-                    $hub_map = [
-                        "05" => $fs_05,
-                        "14" => $fs_14,
-                        "33" => $fs_33,
-                        "4E" => $fs_4e,
-                        "25" => $fs_25,
-                        "60" => $fs_60,
-                        "61" => $fs_61,
-                        "19" => $fs_19,
-                        "74" => $fs_74,
-                        "3E" => $fs_3e,
-                        "97" => $fs_97,
-                        "83" => $fs_83
-                    ];
-
-                    $id      = $hub_map[ strtoupper( $last_p ) ] ?? $fs_undf;
-
-                    $product->set_shipping_class_id( $id );
-                }
-                else
-                {
-                    $product->set_shipping_class_id( $fs_ );
-                }
-            }
-
-            if ( isset( $item[ "regular_price" ] ) && isset( $item[ "sale_price" ] ) )
-            {
-                $product->set_regular_price( $item[ "regular_price" ] );
-                $product->set_sale_price( $item[ "sale_price" ] );
-            }
-
-            $product->save();
-        }
-
-		return $shipping;
+        return $this->api->get_freight( $body );
 	}
 
     /**
@@ -339,27 +228,30 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
      * @param   array   $package
      * @return  array
      */
-    private function process_package( $package ) : array
+    private function process_package( array $package ) : array
     {
-        $postalCode = $package[ "destination" ][ "postcode" ];
-        $items      = [];
+        $products = [];
 
         foreach ( $package[ "contents" ] as $content )
         {
-            $product = wc_get_product( $content[ "product_id" ] );
+            if ( $content[ "variation_id" ] != 0 )
+                $product = wc_get_product( $content[ "variation_id" ] );
+            else
+                $product = wc_get_product( $content[ "product_id" ] );
 
             if ( !$product || !$product->get_meta( "_mfi_supplied", true ) )
                 continue;
 
-            $items[] = [
-                "sku"      => $product->get_sku(),
-                "quantity" => $content[ "quantity" ]
+            $products[] = [
+                "unique"           => $product->get_meta( "_mfi_supplier_sku", true ),
+                "quantity"         => ( int ) $content[ "quantity" ],
+                "transport_method" => "1"
             ];
         }
 
         return [
-            "postalCode" => $postalCode,
-            "items"      => $items
+            "freight_type" => 1,
+            "products"     => $products,
         ];
     }
 }
