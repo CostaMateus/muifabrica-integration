@@ -34,10 +34,18 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
         $this->method_title       = __( "Aéreo Muifabrica",              "muifabrica_integration" );
         $this->method_description = __( "Entrega aérea pela Muifabrica", "muifabrica_integration" );
 
-        $this->enabled            = "yes";
         $this->title              = "Muifabrica";
+        $this->enabled            = "yes";
 
-        $this->supports           = [ "shipping-zones", "instance-settings", ];
+        $this->supports           = [
+            "settings",
+            "shipping-zones",
+            "instance-settings",
+            "shipping-calculator",
+            "package-rates",
+            "requires_shipping_address",
+            "is_available"
+        ];
 
         $this->init();
     }
@@ -54,10 +62,11 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
         // This is part of the settings API.
         // Override the method to add your own settings
         $this->init_form_fields();
+        $this->init_settings();
 
         // Define user set variables.
-        $this->enabled            = $this->get_option( "enabled"           );
         $this->title              = $this->get_option( "title"             );
+        $this->enabled            = $this->get_option( "enabled"           );
         $this->shipping_class_id  = $this->get_option( "shipping_class_id" );
 
         // Save settings in admin if you have any defined
@@ -72,6 +81,8 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
      */
     public function init_form_fields() : void
     {
+        $shipping_class             = $this->get_shipping_classes_options();
+
         $this->instance_form_fields = [
             "enabled"            => [
                 "type"        => "checkbox",
@@ -83,16 +94,16 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
                 "type"        => "text",
                 "title"       => __( "Título",                                                      "muifabrica_integration" ),
                 "description" => __( "Isto controla o título que o usuário vê durante o checkout.", "muifabrica_integration" ),
-                "desc_tip"    => true,
+                "desc_tip"    => false,
                 "default"     => $this->method_title,
             ],
             "shipping_class_id"  => [
                 "type"        => "select",
                 "title"       => __( "Classe de entrega",                                           "muifabrica_integration" ),
                 "description" => "",
-                "default"     => "",
+                "default"     => array_key_first( $shipping_class ),
                 "class"       => "wc-enhanced-select",
-                "options"     => $this->get_shipping_classes_options(),
+                "options"     => $shipping_class,
             ],
         ];
     }
@@ -111,27 +122,24 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
     }
 
     /**
-     * TODO
      * Check if package uses only the selected shipping class.
      *
      * @since   1.0.0
      * @param   array   $package    Cart package.
      * @return  bool
      */
-    protected function has_only_selected_shipping_class( $package )
+    protected function check_shipping_class( $package )
     {
         $only_selected = true;
 
-        if ( in_array( -1, $this->shipping_class_id ) ) return $only_selected;
-
         foreach ( $package[ "contents" ] as $item_id => $values )
         {
-            $product = $values[ "data" ];
+            $product = $values[ "data"     ];
             $qty     = $values[ "quantity" ];
 
             if ( $qty > 0 && $product->needs_shipping() )
             {
-                if ( !in_array( $product->get_shipping_class_id(), $this->shipping_class_id ) )
+                if ( $product->get_shipping_class_id() != $this->shipping_class_id )
                 {
                     $only_selected = false;
                     break;
@@ -153,53 +161,62 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
     public function calculate_shipping( $package = [] )
     {
         // Check if valid to be calculeted
-        if ( "" === $package[ "destination" ][ "postcode" ] || "BR" !== $package[ "destination" ][ "country" ] ) return;
+        if ( "" === $package[ "destination" ][ "postcode" ] || "BR" !== $package[ "destination" ][ "country" ] )
+            return;
 
         // Check if complete postcode
-        $postcode = strlen($package[ "destination" ][ "postcode" ] );
-        if ( $postcode < 8 || $postcode > 9 ) return;
+        $postcode = strlen( $package[ "destination" ][ "postcode" ] );
+        if ( $postcode < 8 || $postcode > 9 )
+            return;
 
         // Check for shipping classes.
-        if ( ! $this->has_only_selected_shipping_class( $package ) ) return;
-
-        // executa a consulta a api
-        $shipping = $this->get_rate( $package );
-
-        if ( $shipping[ "errorCode" ] )
-        {
-            \Muifabrica_Integration::log( "error", print_r( [ "calculate_shipping_error", $shipping ], true ), true );
+        if ( !$this->check_shipping_class( $package ) )
             return;
-        }
 
-        $meta  = [];
-        $costs = [];
-        $time  = 0;
+        $this->add_rate( [
+            "label"    => $this->title,
+            "cost"     => rand( 1, 100 ),
+            "calc_tax" => "per_item"
+        ] );
 
-        foreach ( $shipping[ "data" ] as $data )
-        {
-            if ( $data[ "errorCode" ] ) return;
+        // // executa a consulta a api
+        // $shipping = $this->get_rate( $package );
 
-            $item         = $data[ "data" ];
-            $id           = $item[ "product_id" ];
-            $costs[ $id ] = ( float ) $item[ "deliveryPrice" ];
-            $time         = ( $item[ "deliveryTime" ] > $time ) ? $item[ "deliveryTime" ] : $time;
-        }
+        // if ( $shipping[ "errorCode" ] )
+        // {
+        //     \Muifabrica_Integration::log( "error", print_r( [ "calculate_shipping_error", $shipping ], true ), true );
+        //     return;
+        // }
 
-        $meta[ "price"   ] = $costs;
-        $meta[ "company" ] = "Muifabrica";
+        // $meta  = [];
+        // $costs = [];
+        // $time  = 0;
 
-        // Create the rate
-        $rate = [
-            "id"        => $this->id . $this->instance_id,
-            "label"     => $this->title,
-            "cost"      => $costs,
-            "calc_tax"  => "per_item",
-            "meta_data" => $meta,
-            "package"   => $package
-        ];
+        // foreach ( $shipping[ "data" ] as $data )
+        // {
+        //     if ( $data[ "errorCode" ] ) return;
 
-        // Register the rate
-        $this->add_rate( $rate );
+        //     $item         = $data[ "data" ];
+        //     $id           = $item[ "product_id" ];
+        //     $costs[ $id ] = ( float ) $item[ "deliveryPrice" ];
+        //     $time         = ( $item[ "deliveryTime" ] > $time ) ? $item[ "deliveryTime" ] : $time;
+        // }
+
+        // $meta[ "price"   ] = $costs;
+        // $meta[ "company" ] = "Muifabrica";
+
+        // // Create the rate
+        // $rate = [
+        //     "id"        => $this->id . $this->instance_id,
+        //     "label"     => $this->title,
+        //     "cost"      => 100, // $costs,
+        //     "calc_tax"  => "per_item",
+        //     "meta_data" => [], // $meta,
+        //     "package"   => [], // $package
+        // ];
+
+        // // Register the rate
+        // $this->add_rate( $rate );
     }
 
 	/**
@@ -336,7 +353,7 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
 
             $items[] = [
                 "sku"      => $product->get_sku(),
-                "quantity" => $content["quantity"]
+                "quantity" => $content[ "quantity" ]
             ];
         }
 
