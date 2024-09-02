@@ -213,7 +213,7 @@ class Muifabrica_Integration
 
 		add_filter( "woocommerce_shipping_methods",                         [ $this, "add_shippings_method" ]        );
 
-		add_filter( "plugin_row_meta",                                      [ $this, "plugin_row_meta"      ], 10, 3 );
+		// add_filter( "plugin_row_meta",                                      [ $this, "plugin_row_meta"      ], 10, 3 );
 	}
 
 	/**
