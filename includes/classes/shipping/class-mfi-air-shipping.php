@@ -156,15 +156,9 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
      */
     protected function is_brl_currency() : float
     {
-        $dollar = 1;
-
-        if ( "BRL" === get_option( "woocommerce_currency" ) )
-        {
-            $dollar = $this->api->get_dollar_price();
-            $dollar = str_replace( ",", ".", $dollar );
-        }
-
-        return $dollar;
+        return ( "BRL" === get_option( "woocommerce_currency" ) )
+                ? str_replace( ",", ".", $this->api->get_dollar_price() )
+                : 1;
     }
 
     /**
