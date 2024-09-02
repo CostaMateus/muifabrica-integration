@@ -217,8 +217,6 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
             "package"   => $package
         ];
 
-        \Muifabrica_Integration::log( "info", print_r( $rate, true ) );
-
         // Register the rate
         $this->add_rate( $rate );
     }
