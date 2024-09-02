@@ -37,7 +37,7 @@ class MFI_Sea_Shipping extends \WC_Shipping_Method
         $this->enabled            = "yes";
 
         $this->supports           = [
-            "settings",
+            // "settings",
             "shipping-zones",
             "instance-settings",
             "shipping-calculator",
