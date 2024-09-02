@@ -37,6 +37,7 @@ $_app_secret           = get_option( "_mfi_app_secret"     );
 $_app_secret_label     = __( "App Secret",                                                                       "muifabrica_integration" );
 $_app_secret_descr     = __( "App Secret do ambiente real (produção).",                                          "muifabrica_integration" );
 
+$_is_brl               = ( "BRL" === get_option( "woocommerce_currency" ) );
 ?>
 
 <section>
@@ -51,21 +52,10 @@ $_app_secret_descr     = __( "App Secret do ambiente real (produção).",       
 
 			<table class="form-table" >
 				<tbody>
-					<!-- dollar -->
-					<tr valign="top" >
-						<th scope="row" class="titledesc" >
-							<label for="mfi_env_api" >
-								Cotação do dólar
-							</label>
-						</th>
-						<td class="forminp" >
-							<?php echo "R$ " . ( new \Muifabrica_Integration\Api\Muifabrica_Api() )->get_dollar_price(); ?>
-
-							<p class="description" >
-								Atualizado a cada 15 minutos
-							</p>
-						</td>
-					</tr>
+					<?php
+						if ( $_is_brl )
+							require_once( Muifabrica_Integration::DIR . "/templates/partials/dollar.php" );
+					?>
 
 					<!-- on/off homol -->
 					<tr valign="top" >
