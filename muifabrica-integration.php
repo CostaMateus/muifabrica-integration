@@ -212,6 +212,8 @@ class Muifabrica_Integration
 		add_filter( "http_request_args",                                    [ $this, "accept_unsafe_urls"   ], 90, 2 );
 
 		add_filter( "woocommerce_shipping_methods",                         [ $this, "add_shippings_method" ]        );
+
+		add_filter( "plugin_row_meta",                                      [ $this, "plugin_row_meta"      ], 10, 3 );
 	}
 
 	/**
@@ -288,6 +290,38 @@ class Muifabrica_Integration
         $methods[ "muifabrica-sea-shipping" ] = "Muifabrica_Integration\Classes\Shipping\MFI_Sea_Shipping";
 
 		return $methods;
+	}
+
+	/**
+	 * Add link to changelog modal
+	 *
+	 * @since 	1.0.0
+	 * @param 	array 	$plugin_meta
+	 * @param 	string 	$plugin_file
+	 * @param 	array 	$plugin_data
+	 * @return 	array
+	 */
+	public function plugin_row_meta( $plugin_meta, $plugin_file, $plugin_data ) : array
+	{
+		$path = path_join( WP_PLUGIN_DIR, $plugin_file );
+
+		if ( DIRECTORY_SEPARATOR == "\\" )
+			$path = str_replace( "/", "\\", $path );
+
+        if ( self::FILE === $path )
+		{
+            $url = plugins_url( "readme.txt", self::FILE );
+
+            $plugin_meta[] = sprintf(
+                "<a href='%s' class='thickbox open-plugin-details-modal' aria-label='%s' data-title='%s'>%s</a>",
+                add_query_arg( "TB_iframe", "true", $url ),
+                esc_attr( sprintf( __( "More information about %s" ), $plugin_data[ "Name" ] ) ),
+                esc_attr( $plugin_data[ "Name" ] ),
+                __( "Histórico de alterações" )
+            );
+        }
+
+        return $plugin_meta;
 	}
 
     /**
