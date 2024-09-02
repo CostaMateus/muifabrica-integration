@@ -150,6 +150,24 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
     }
 
     /**
+     * Checks if the WooCommerce currency is set to BRL (Brazilian Real) and returns the dollar price.
+     *
+     * @return  float   The dollar price if the currency is BRL, otherwise 1.
+     */
+    protected function is_brl_currency() : float
+    {
+        $dollar = 1;
+
+        if ( "BRL" === get_option( "woocommerce_currency" ) )
+        {
+            $dollar = $this->api->get_dollar_price();
+            $dollar = str_replace( ",", ".", $dollar );
+        }
+
+        return $dollar;
+    }
+
+    /**
      * Calculates the shipping coast for a given package.
      *
      * @since   1.0.0
@@ -182,7 +200,7 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
         }
 
         // Get the current dollar price from the API.
-        $dollar   = $this->api->get_dollar_price();
+        $dollar   = $this->is_brl_currency();
         $costs    = 0;
 
         // Calculate the total shipping cost.
