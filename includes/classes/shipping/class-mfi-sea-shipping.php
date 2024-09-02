@@ -201,19 +201,23 @@ class MFI_Sea_Shipping extends \WC_Shipping_Method
         foreach ( $shipping as $i => $value )
             $costs += ( float ) $value;
 
+        $cost    *= $dollar;
+
         // Prepare metadata for the shipping rate.
-        $meta[ "price"   ] = $costs * $dollar;
+        $meta[ "price"   ] = $costs;
         $meta[ "company" ] = "Muifabrica";
 
         // Create the shipping rate array.
         $rate = [
             "id"        => $this->id . $this->instance_id,
             "label"     => $this->title,
-            "cost"      => $costs * $dollar,
+            "cost"      => $costs,
             "calc_tax"  => "per_item",
             "meta_data" => $meta,
             "package"   => $package
         ];
+
+        \Muifabrica_Integration::log( "info", print_r( $rate, true ) );
 
         // Register the rate
         $this->add_rate( $rate );
