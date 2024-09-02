@@ -519,15 +519,18 @@ class MFI_Product_Table extends \WP_List_Table
     {
         if ( $which == "top" )
         {
-            $dollar = ( new Muifabrica_Api() )->get_dollar_price();;
+            if ( "BRL" === get_option( "woocommerce_currency" ) )
+            {
+                $dollar = ( new Muifabrica_Api() )->get_dollar_price();
 
-            echo "<div class='mfi-mb-9 mfi-float-left' >
-                    <p class='mfi-my-5' >
-                        <strong>Cotação do dólar:</strong>
-                        R$ {$dollar}
-                        <small>(Atualizado a cada 15 minutos)</small>
-                    </p>
-                </div>";
+                echo "<div class='mfi-mb-9 mfi-float-left' >
+                        <p class='mfi-my-5' >
+                            <strong>Cotação do dólar:</strong>
+                            R$ {$dollar}
+                            <small>(Atualizado a cada 15 minutos)</small>
+                        </p>
+                    </div>";
+            }
         }
 
         // if ( $which == "bottom" )
