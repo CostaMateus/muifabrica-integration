@@ -408,7 +408,7 @@ class MFI_Products_Table extends \WP_List_Table
 
         if ( $item->get_manage_stock() )
         {
-            $qtty = ( $this->preview ) ? $item->stock_quantity : $item->get_stock_quantity();
+            $qtty = $item->get_stock_quantity();
             $text = "<mark class='{$class}'>{$stock}</mark> ({$qtty})";
         }
 
@@ -486,7 +486,7 @@ class MFI_Products_Table extends \WP_List_Table
      */
     public function column_categories( $item ) : string
     {
-        return $item->get_categories( ", ", " " . _n( " ", " ", sizeof( get_the_terms( $item->get_id(), "product_cat" ) ), "woocommerce" ) . " ", " " );
+        return wc_get_product_category_list( $item->get_id() );
     }
 
     /**
