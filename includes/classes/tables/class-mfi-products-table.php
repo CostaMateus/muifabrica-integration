@@ -12,7 +12,7 @@ namespace Muifabrica_Integration\Classes\Tables;
 use Muifabrica_Integration\Api\Muifabrica_Api;
 use Muifabrica_Integration\Classes\Helpers\MFI_Helper;
 
-class MFI_Product_Table extends \WP_List_Table
+class MFI_Products_Table extends \WP_List_Table
 {
     /**
      * Products data

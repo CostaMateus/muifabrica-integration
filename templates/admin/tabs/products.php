@@ -9,9 +9,9 @@
 
 defined( "ABSPATH" ) || exit;
 
-use \Muifabrica_Integration\Classes\Tables\MFI_Product_Table;
+use \Muifabrica_Integration\Classes\Tables\MFI_Products_Table;
 
-$pd_table = new MFI_Product_Table();
+$pd_table = new MFI_Products_Table();
 ?>
 
 <section>
