@@ -9,14 +9,26 @@
 
 defined( "ABSPATH" ) || exit;
 
+use \Muifabrica_Integration\Classes\Tables\MFI_Orders_table;
+
+$or_table = new MFI_Orders_table();
 ?>
 
 <section>
-	<div class="wrap-mfi" id="" >
-		<h2 class="wp-heading-inline" style="display:inline;" >
-			<?php _e( "Pedidos", "muifabrica_integration" ); ?>
-		</h2>
+	<div class="wrap-mfi" id="mfi-orders-list-table" >
 
-		<p><?php _e( "Pedidos - em desenvolvimento!", "muifabrica_integration" ); ?></p>
+		<form id="mfi-orders-list-table-form" method="post" >
+			<?php
+				$page  = htmlspecialchars( $_POST[ "page" ] ?? "" );
+				$paged = filter_input( INPUT_GET, 'paged', FILTER_SANITIZE_NUMBER_INT );
+
+				printf( "<input type='hidden' name='page'  value='%s' />", $page  );
+				printf( "<input type='hidden' name='paged' value='%d' />", $paged );
+
+				$or_table->prepare_items();
+				$or_table->display();
+			?>
+		</form>
+
 	</div>
 </section>
