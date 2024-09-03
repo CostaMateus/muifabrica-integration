@@ -253,11 +253,11 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
             else
                 $product = wc_get_product( $content[ "product_id" ] );
 
-            if ( !$product || !$product->get_meta( "_mfi_supplied", true ) )
+            if ( !$product || !$product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ], true ) )
                 continue;
 
             $products[] = [
-                "unique"           => $product->get_meta( "_mfi_supplier_sku", true ),
+                "unique"           => $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku" ], true ),
                 "quantity"         => ( int ) $content[ "quantity" ],
                 "transport_method" => "1"
             ];

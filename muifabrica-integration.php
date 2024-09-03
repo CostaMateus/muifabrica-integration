@@ -54,6 +54,35 @@ class Muifabrica_Integration
 	const DIR     = __DIR__;
 
 	/**
+	 * Plugin meta keys.
+	 *
+	 * @since 	1.0.0
+	 * @var 	array
+	 */
+	const METAS   = [
+		"access_token"        => "_mfi_access_token",
+		"app_id"              => "_mfi_app_id",
+		"app_id_hml"          => "_mfi_app_id_hml",
+		"app_secret"          => "_mfi_app_secret",
+		"app_secret_hml"      => "_mfi_app_secret_hml",
+		"categories_settings" => "_mfi_categories_settings",
+		"debug"               => "_mfi_debug",
+		"dollar"              => "_mfi_dollar",
+		"email_settings"      => "_mfi_email_settings",
+		"env_api"             => "_mfi_env_api",
+		"has_order"           => "_mfi_has_order",
+		"order_sent"          => "_mfi_order_sent",
+		"ot_price_upd"        => "_mfi_ot_price_upd",
+		"price_upd"           => "_mfi_price_upd",
+		"regular_ot_price"    => "_mfi_regular_ot_price",
+		"regular_price"       => "_mfi_regular_price",
+		"supplied"            => "_mfi_supplied",
+		"supplier_sku"        => "_mfi_supplier_sku",
+		"status_regular"      => "_mfi_status_regular",
+		"status_regular_ot"   => "_mfi_status_regular_ot",
+	];
+
+	/**
 	 * Instance of this class.
 	 *
 	 * @since 	1.0.0
@@ -106,7 +135,7 @@ class Muifabrica_Integration
 		$logger  = wc_get_logger();
 		$context = [ "source" => self::DOMAIN ];
 
-		if ( $is_error || get_option( "_mfi_debug" ) )
+		if ( $is_error || get_option( self::METAS[ "debug" ] ) )
 			$logger->$level( $message, $context );
 	}
 
@@ -235,7 +264,7 @@ class Muifabrica_Integration
 		require_once( self::DIR . "/includes/classes/tables/class-mfi-products-table.php" );
 
 		// Orders
-		// require_once( self::DIR . "/includes/classes/tables/class-woo-mfi-orders-table.php"   );
+		require_once( self::DIR . "/includes/classes/tables/class-mfi-orders-table.php"   );
 		require_once( self::DIR . "/includes/classes/class-mfi-orders.php"                );
 		new Muifabrica_Integration\Classes\MFI_Orders();
 	}
@@ -507,24 +536,24 @@ class Muifabrica_Integration
 		// debug
 		$debug = ( isset( $_POST[ "mfi_debug"   ] ) && $_POST[ "mfi_debug"   ] === "on" ) ? true  : false;
 
-		update_option( "_mfi_env_api", $env   );
-		update_option( "_mfi_debug",   $debug );
+		update_option( self::METAS[ "env_api" ], $env   );
+		update_option( self::METAS[ "debug"   ], $debug );
 
 		// app id hml
 		if ( isset( $_POST[ "mfi_app_id_hml" ] ) && !empty( $_POST[ "mfi_app_id_hml" ] ) )
-			update_option( "_mfi_app_id_hml", $_POST[ "mfi_app_id_hml" ] );
+			update_option( self::METAS[ "app_id_hml" ], $_POST[ "mfi_app_id_hml" ] );
 
 		// app secret hml
 		if ( isset( $_POST[ "mfi_app_secret_hml" ] ) && !empty( $_POST[ "mfi_app_secret_hml" ] ) )
-			update_option( "_mfi_app_secret_hml", $_POST[ "mfi_app_secret_hml" ] );
+			update_option( self::METAS[ "app_secret_hml" ], $_POST[ "mfi_app_secret_hml" ] );
 
 		// app id prd
 		if ( isset( $_POST[ "mfi_app_id" ] ) && !empty( $_POST[ "mfi_app_id" ] ) )
-			update_option( "_mfi_app_id", $_POST[ "mfi_app_id" ] );
+			update_option( self::METAS[ "app_id" ], $_POST[ "mfi_app_id" ] );
 
 		// app secret prd
 		if ( isset( $_POST[ "mfi_app_secret" ] ) && !empty( $_POST[ "mfi_app_secret" ] ) )
-			update_option( "_mfi_app_secret", $_POST[ "mfi_app_secret" ] );
+			update_option( self::METAS[ "app_secret" ], $_POST[ "mfi_app_secret" ] );
 
 		$url = "page=" . self::DOMAIN;
 

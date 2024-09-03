@@ -34,19 +34,19 @@ class MFI_Helper
         $categories[] = self::find_or_create_category( $product[ "cate_name_pt" ] );
         $metadatas    = [
             [
-                "key"   => "_mfi_regular_price",
+                "key"   => \Muifabrica_Integration::METAS[ "regular_price"     ],
                 "value" => $product[ "price"    ],
             ], [
-                "key"   => "_mfi_status_regular",
+                "key"   => \Muifabrica_Integration::METAS[ "status_regular"    ],
                 "value" => "even",
             ], [
-                "key"   => "_mfi_regular_ot_price",
+                "key"   => \Muifabrica_Integration::METAS[ "regular_ot_price"  ],
                 "value" => $product[ "ot_price" ],
             ], [
-                "key"   => "_mfi_status_regular_ot",
+                "key"   => \Muifabrica_Integration::METAS[ "status_regular_ot" ],
                 "value" => "even",
             ], [
-                "key"   => "_mfi_supplied",
+                "key"   => \Muifabrica_Integration::METAS[ "supplied"          ],
                 "value" => "yes",
             ],
         ];
@@ -408,10 +408,10 @@ class MFI_Helper
                 if ( $variation->get_sku() != $t_variation[ "sku" ] )
                 {
                     $variation->set_sku( $prefixes[ "child" ] . $t_variation[ "sku" ] );
-                    $variation->update_meta_data( "_mfi_supplier_sku", $t_variation[ "sku" ] );
+                    $variation->update_meta_data( \Muifabrica_Integration::METAS[ "supplier_sku" ], $t_variation[ "sku" ] );
                 }
 
-                $variation->update_meta_data( "_mfi_supplied", "yes" );
+                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "supplied" ], "yes" );
 
                 $variation->set_regular_price( ( string ) $t_variation[ "regular_price" ] );
                 $variation->set_sale_price( ( string ) $t_variation[ "sale_price" ] );

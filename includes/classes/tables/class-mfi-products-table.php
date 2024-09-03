@@ -47,7 +47,7 @@ class MFI_Product_Table extends \WP_List_Table
     {
         $this->products = wc_get_products( [
             "limit"        => -1,
-            "meta_key"     => "_mfi_supplied",
+            "meta_key"     => \Muifabrica_Integration::METAS[ "supplied" ],
             "meta_compare" => "EXISTS",
         ] );
     }
@@ -443,11 +443,11 @@ class MFI_Product_Table extends \WP_List_Table
      */
     public function column_m_price( $item ) : string
     {
-        $last_upd = $item->get_meta( "_mfi_price_upd" );
+        $last_upd = $item->get_meta( \Muifabrica_Integration::METAS[ "price_upd" ] );
 
         $regular  = [
-            "status" => $item->get_meta( "_mfi_status_regular" ),
-            "price"  => $item->get_meta( "_mfi_regular_price"  ),
+            "status" => $item->get_meta( \Muifabrica_Integration::METAS[ "status_regular" ] ),
+            "price"  => $item->get_meta( \Muifabrica_Integration::METAS[ "regular_price"  ] ),
         ];
 
         return MFI_Helper::format_mf_price( $last_upd, $regular );
@@ -464,11 +464,11 @@ class MFI_Product_Table extends \WP_List_Table
      */
     public function column_m_ot_price( $item ) : string
     {
-        $last_upd = $item->get_meta( "_mfi_ot_price_upd" );
+        $last_upd = $item->get_meta( \Muifabrica_Integration::METAS[ "ot_price_upd" ] );
 
         $regular  = [
-            "status" => $item->get_meta( "_mfi_status_regular_ot" ),
-            "price"  => $item->get_meta( "_mfi_regular_ot_price"  ),
+            "status" => $item->get_meta( \Muifabrica_Integration::METAS[ "status_regular_ot" ] ),
+            "price"  => $item->get_meta( \Muifabrica_Integration::METAS[ "regular_ot_price"  ] ),
         ];
 
         return MFI_Helper::format_mf_price( $last_upd, $regular );

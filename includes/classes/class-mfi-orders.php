@@ -79,24 +79,24 @@ class MFI_Orders
         {
             $product = $item->get_product();
 
-            if ( !$product || !$product->get_meta( "_mfi_supplied", true ) )
+            if ( !$product || !$product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ], true ) )
                 continue;
 
-            $sku     = $product->get_meta( "_mfi_supplier_sku" );
+            $sku     = $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku" ] );
 
             $products[ $sku ] = [
                 "sku"      => $product->get_sku(),
                 "quantity" => $item->get_quantity(),
-                "sale"     => $product->get_meta( "_mfi_regular_price"    ),
-                // "regular"  => $product->get_meta( "_mfi_regular_ot_price" ),
+                "sale"     => $product->get_meta( \Muifabrica_Integration::METAS[ "regular_price" ]    ),
+                // "regular"  => $product->get_meta( \Muifabrica_Integration::METAS[ "regular_ot_price" ] ),
             ];
         }
 
         if ( empty( $products ) ) return;
 
-        $order->update_meta_data( "_has_mfi_order", true );
+        $order->update_meta_data( \Muifabrica_Integration::METAS[ "has_order" ], true );
 
-        if ( $order->get_meta( "_mfi_order_sent", true ) ) return;
+        if ( $order->get_meta( \Muifabrica_Integration::METAS[ "order_sent" ], true ) ) return;
 
         $api         = new Muifabrica_Api();
 
@@ -107,7 +107,7 @@ class MFI_Orders
             "Order ID: #{$response_order_id}",
         ] ) );
 
-        $order->add_meta_data( "_mfi_order_sent", true );
+        $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_sent" ], true );
         $order->save();
     }
 
@@ -152,7 +152,7 @@ class MFI_Orders
         {
             $product = $item->get_product();
 
-            if ( !$product || !$product->get_meta( "_mfi_supplied", true ) )
+            if ( !$product || !$product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ], true ) )
                 continue;
 
             $result .= "<li>{$item->get_quantity()}x {$product->get_sku()}</li>";
@@ -178,10 +178,10 @@ class MFI_Orders
         {
             $product = $item->get_product();
 
-            if ( !$product || !$product->get_meta( "_mfi_supplied", true ) )
+            if ( !$product || !$product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ], true ) )
                 continue;
 
-            if ( !$theorder->get_meta( "_mfi_order_sent", true ) )
+            if ( !$theorder->get_meta( \Muifabrica_Integration::METAS[ "order_sent" ], true ) )
                 $to_send = true;
         }
 

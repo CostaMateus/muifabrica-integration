@@ -9,31 +9,31 @@
 
 defined( "ABSPATH" ) || exit;
 
-$_env                  = get_option( "_mfi_env_api" );
+$_env                  = get_option( \Muifabrica_Integration::METAS[ "env_api" ] );
 $_env_api              = ( !empty( $_env ) || $_env == "hml" ) ? "checked" : "";
 $_env_api_label        = __( "Homologação",                                                                      "muifabrica_integration" );
 $_env_api_input        = __( "Habilitar API de homologação",                                                     "muifabrica_integration" );
 $_env_api_descr        = __( "Se marcado, a comunicação será feita com o servidor de HOMOLOGAÇÃO da Muifabrica.
 								Se não, será feita com o servidor real, de PRODUÇÃO.",                           "muifabrica_integration" );
 
-$_debug                = ( !empty( get_option( "_mfi_debug" ) ) ) ? "checked" : "";
+$_debug                = ( !empty( get_option( \Muifabrica_Integration::METAS[ "debug" ] ) ) ) ? "checked" : "";
 $_debug_label          = __( "Log de depuração",                                                                 "muifabrica_integration" );
 $_debug_input          = __( "Ativar / Desativar",                                                               "muifabrica_integration" );
 $_debug_descr          = __( "Se ativado, irá registrar logs detalhados. Caso não, apenas logs críticos.",       "muifabrica_integration" );
 
-$_app_id_hml           = get_option( "_mfi_app_id_hml"     );
+$_app_id_hml           = get_option( \Muifabrica_Integration::METAS[ "app_id_hml" ] );
 $_app_id_hml_label     = __( "App ID Homologação",                                                               "muifabrica_integration" );
 $_app_id_hml_descr     = __( "App ID do ambiente de testes (homologação).",                                      "muifabrica_integration" );
 
-$_app_secret_hml       = get_option( "_mfi_app_secret_hml" );
+$_app_secret_hml       = get_option( \Muifabrica_Integration::METAS[ "app_secret_hml" ] );
 $_app_secret_hml_label = __( "App Secret Homologação",                                                           "muifabrica_integration" );
 $_app_secret_hml_descr = __( "App Secret do ambiente de testes (homologação).",                                  "muifabrica_integration" );
 
-$_app_id               = get_option( "_mfi_app_id"         );
+$_app_id               = get_option( \Muifabrica_Integration::METAS[ "app_id" ] );
 $_app_id_label         = __( "App ID",                                                                           "muifabrica_integration" );
 $_app_id_descr         = __( "App ID do ambiente real (produção).",                                              "muifabrica_integration" );
 
-$_app_secret           = get_option( "_mfi_app_secret"     );
+$_app_secret           = get_option( \Muifabrica_Integration::METAS[ "app_secret" ] );
 $_app_secret_label     = __( "App Secret",                                                                       "muifabrica_integration" );
 $_app_secret_descr     = __( "App Secret do ambiente real (produção).",                                          "muifabrica_integration" );
 

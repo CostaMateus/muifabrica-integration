@@ -59,7 +59,7 @@ class Muifabrica_Api
 	{
 		// Initialize environment, URLs, and logger properties
 
-		$this->env  = get_option( "_mfi_env_api" );
+		$this->env  = get_option( \Muifabrica_Integration::METAS[ "env_api" ] );
 
 		$this->urls = [
 			"access_token"   => "access_token",     // POST
@@ -121,8 +121,12 @@ class Muifabrica_Api
      */
     private function get_app_credentials() : array
     {
-        $app_id = ( $this->env != "prd" ) ? get_option( "_mfi_app_id_hml"     ) : get_option( "_mfi_app_id"     );
-        $app_sc = ( $this->env != "prd" ) ? get_option( "_mfi_app_secret_hml" ) : get_option( "_mfi_app_secret" );
+        $app_id = ( $this->env != "prd" )
+					? get_option( \Muifabrica_Integration::METAS[ "app_id_hml"     ] )
+					: get_option( \Muifabrica_Integration::METAS[ "app_id"         ] );
+        $app_sc = ( $this->env != "prd" )
+					? get_option( \Muifabrica_Integration::METAS[ "app_secret_hml" ] )
+					: get_option( \Muifabrica_Integration::METAS[ "app_secret"     ] );
 
         return [ $app_id, $app_sc ];
     }
@@ -182,7 +186,7 @@ class Muifabrica_Api
 	 */
 	public function get_dollar_price() : string|false
 	{
-		$dollar = get_transient( "_mfi_dollar" );
+		$dollar = get_transient( \Muifabrica_Integration::METAS[ "dollar" ] );
 
 		if ( $dollar !== false )
 			return $dollar;
@@ -200,7 +204,7 @@ class Muifabrica_Api
 			$dollar        = $response_body[ "USDBRL" ][ "bid" ];
 			$dollar        = number_format( ( float ) $dollar, 2, ",", "" );
 
-			set_transient( "_mfi_dollar", $dollar, ( 15 * MINUTE_IN_SECONDS ) );
+			set_transient( \Muifabrica_Integration::METAS[ "dollar" ], $dollar, ( 15 * MINUTE_IN_SECONDS ) );
 
 			return $dollar;
         }
@@ -275,7 +279,7 @@ class Muifabrica_Api
 				return false;
 
 			// Set the access token for API authentication
-			set_transient( "_mfi_access_token", $response_body[ "data" ][ "token" ], DAY_IN_SECONDS );
+			set_transient( \Muifabrica_Integration::METAS[ "access_token" ], $response_body[ "data" ][ "token" ], DAY_IN_SECONDS );
 
 			// Log if debug enabled
 			$this->log( "info", [
@@ -314,14 +318,14 @@ class Muifabrica_Api
 	 */
 	public function get_token() : string|false
 	{
-		$token = get_transient( "_mfi_access_token" );
+		$token = get_transient( \Muifabrica_Integration::METAS[ "access_token" ] );
 
 		if ( $token === false )
 		{
 			if ( !$this->generate_token() )
 				return false;
 
-			$token = get_transient( "_mfi_access_token" );
+			$token = get_transient( \Muifabrica_Integration::METAS[ "access_token" ] );
 		}
 
 		return $token;

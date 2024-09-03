@@ -14,7 +14,10 @@ use \Muifabrica_Integration\Classes\Tables\DSM_Preview_table;
 
 $pv_table = new DSM_Preview_table();
 
-$cat_notice = ( get_option( "_mfi_categories_settings" ) ) ? __( "Category import is enabled.", "muifabrica_integration" ) : __( "Category import is <u>not</u> enabled.", "muifabrica_integration" );
+$cat_notice = ( get_option( \Muifabrica_Integration::METAS[ "categories_settings" ] ) )
+				? __( "Category import is enabled.", "muifabrica_integration" )
+				: __( "Category import is <u>not</u> enabled.", "muifabrica_integration" );
+
 $url_config = admin_url( "admin.php?page=muifabrica_integration&tab=settings" );
 $link       = "<a href='{$url_config}' >" . __( "click here", "muifabrica_integration" ) . "</a>";
 $compl      = __( "To change this setting,", "muifabrica_integration" );

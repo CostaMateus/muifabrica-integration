@@ -9,9 +9,9 @@
 
 defined( "ABSPATH" ) || exit;
 
-$_email    = get_option( "_mfi_email_settings" );
-$_category = ( !empty( get_option( "_mfi_categories_settings" ) ) ) ? "checked" : "";
-$_debug    = ( !empty( get_option( "_mfi_debug"              ) ) ) ? "checked" : "";
+$_email    = get_option( \Muifabrica_Integration::METAS[ "email_settings" ] );
+$_category = ( !empty( get_option( \Muifabrica_Integration::METAS[ "categories_settings" ] ) ) ) ? "checked" : "";
+$_debug    = ( !empty( get_option( \Muifabrica_Integration::METAS[ "debug"               ] ) ) ) ? "checked" : "";
 
 ?>
 
