@@ -204,6 +204,7 @@ class MFI_Air_Shipping extends \WC_Shipping_Method
         $costs   *= $dollar;
 
         // Prepare metadata for the shipping rate.
+        $meta[ "rate"    ] = $shipping;
         $meta[ "price"   ] = $costs;
         $meta[ "company" ] = "Muifabrica";
 
