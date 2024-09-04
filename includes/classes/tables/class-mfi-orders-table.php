@@ -306,32 +306,21 @@ class MFI_Orders_table extends \WP_List_Table
      * @param   array|object $item
      * @return  string
      */
-    public function column_suppliers( $item ) : string
+    public function column_skus( $item ) : string
     {
-        $data     = [];
-        $result   = "";
+        $result = "";
 
         foreach ( $item->get_items() as $aux_item )
         {
             $product = $aux_item->get_product();
 
-            if ( !$product ) continue;
+            if ( !$product || !$product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ], true ) )
+                continue;
 
-            if ( isset( $data[ $product->get_sku() ] ) )
-                $data[ $product->get_sku() ] = $product->get_quantity();
+            $result .= "<li>{$aux_item->get_quantity()}x {$product->get_sku()}</li>";
         }
 
-        $last_sku = array_key_last( $data );
-
-        foreach ( $data as $sku => $qty )
-        {
-            $result .= "{$qty}x {$sku}";
-
-            if ( $sku != $last_sku )
-                $result .= "<br>";
-        }
-
-        return $result;
+        return "<ul>{$result}</ul>";
     }
 
     /**
