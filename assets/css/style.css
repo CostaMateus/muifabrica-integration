@@ -360,3 +360,11 @@ table.wp-list-table span.wc-image::before {
 #mfi-general-form .button.wp-hide-pw .dashicons {
     top: -.025rem;
 }
+
+#mfi-orders-list-table .order_id.column-order_id,
+#mfi-orders-list-table .skus.column-skus,
+#mfi-orders-list-table .date.column-date,
+#mfi-orders-list-table .status.column-status,
+#mfi-orders-list-table .total.column-total {
+    vertical-align: middle;
+}
