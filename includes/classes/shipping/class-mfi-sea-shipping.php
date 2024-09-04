@@ -201,7 +201,7 @@ class MFI_Sea_Shipping extends \WC_Shipping_Method
         foreach ( $shipping as $i => $value )
             $costs += ( float ) $value;
 
-        $cost    *= $dollar;
+        $costs   *= $dollar;
 
         // Prepare metadata for the shipping rate.
         $meta[ "price"   ] = $costs;
