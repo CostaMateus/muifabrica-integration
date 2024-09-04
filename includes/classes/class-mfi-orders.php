@@ -11,6 +11,8 @@
 
 namespace Muifabrica_Integration\Classes;
 
+use Muifabrica_Integration\Api\Muifabrica_Api;
+
 class MFI_Orders
 {
     /**
@@ -103,8 +105,8 @@ class MFI_Orders
         // TODO enviar pedido para MF
 
         $order->add_order_note( implode( "\n", [
-            "Order sent successfully",
-            "Order ID: #{$response_order_id}",
+            "Pedido enviado com sucesso!",
+            "ID do pedido: #{$response_order_id}",
         ] ) );
 
         $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_sent" ], true );
