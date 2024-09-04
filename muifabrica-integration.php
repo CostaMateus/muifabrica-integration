@@ -74,6 +74,7 @@ class Muifabrica_Integration
 		"order_sent"          => "_mfi_order_sent",
 		"ot_price_upd"        => "_mfi_ot_price_upd",
 		"price_upd"           => "_mfi_price_upd",
+		"product_id"          => "_mfi_product_id",
 		"regular_ot_price"    => "_mfi_regular_ot_price",
 		"regular_price"       => "_mfi_regular_price",
 		"supplied"            => "_mfi_supplied",
