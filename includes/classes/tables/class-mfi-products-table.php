@@ -125,8 +125,6 @@ class MFI_Products_Table extends \WP_List_Table
                 $orderby = $_GET[ "orderby" ];
         }
 
-        if ( $orderby )
-
         if ( $orderby == "date" )
         {
             $ta = strtotime( $a->get_date_modified() );
