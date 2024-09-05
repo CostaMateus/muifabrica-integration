@@ -23,12 +23,41 @@ class MFI_Orders
     public function __construct()
     {
         add_action( "woocommerce_checkout_order_processed",            [ $this, "send_order_to_muifabrica" ], 20, 3 );
+        add_action( "woocommerce_order_status_changed",                [ $this, "order_status_change"      ], 9, 4  );
+
 		add_filter( "woocommerce_shop_order_list_table_columns",       [ $this, "add_column_title"         ], 10, 1 );
 		add_filter( "woocommerce_shop_order_list_table_custom_column", [ $this, "add_column_content"       ], 10, 2 );
 
         // Order Box Actions
         add_action( "woocommerce_order_actions",                       [ $this, "add_order_box_action"     ], 10, 1 );
         add_action( "woocommerce_order_action_mfi_order_action",       [ $this, "process_order_box_action" ], 10, 1 );
+    }
+
+    /**
+     * Checks if any product in the order is supplied by MFI.
+     *
+     * This function iterates through the items in the order and checks if any product
+     * has a specific meta indicating it is supplied by MFI (Muifabrica Integration).
+     *
+     * @since   1.0.0
+     * @param   object  $order  The order object containing the items to check.
+     * @return  bool            Returns true if any product is supplied by MFI, otherwise false.
+     */
+    private function check_mfi_products( object $order ) : bool
+    {
+        foreach ( $order->get_items() as $item )
+        {
+            $product  = $item->get_product();
+            $supplied = $product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ] );
+
+            if ( $supplied )
+            {
+                return true;
+                break;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -40,8 +69,10 @@ class MFI_Orders
      * @param   object  $order
      * @return  void
      */
-    public function send_order_to_muifabrica( $order_id, $posted_data, $order ) : void
+    public function send_order_to_muifabrica( int $order_id, array $posted_data, object $order ) : void
     {
+        if ( !$this->check_mfi_products( $order ) ) return;
+
         $order->update_meta_data( \Muifabrica_Integration::METAS[ "has_order" ], true );
 
         if ( $order->get_meta( \Muifabrica_Integration::METAS[ "order_sent" ], true ) ) return;
@@ -83,7 +114,6 @@ class MFI_Orders
             "IDs dos sub-pedidos: " . implode( " | ", $mfi_sub_order_ids )
         ] ) );
 
-        $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_sent" ], true );
         $order->save();
     }
 
@@ -94,7 +124,7 @@ class MFI_Orders
 	 * @param   array   $columns
 	 * @return  array
 	 */
-	public function add_column_title( $columns ) : array
+	public function add_column_title( array $columns ) : array
 	{
 		$new_columns = [];
 
@@ -117,7 +147,7 @@ class MFI_Orders
 	 * @param 	object 	$order
 	 * @return  void
 	 */
-	public function add_column_content( $column, $order ) : void
+	public function add_column_content( string $column, object $order ) : void
 	{
         if ( $column !== \Muifabrica_Integration::DOMAIN )
             return;
@@ -144,7 +174,7 @@ class MFI_Orders
 	 * @param 	array   $actions
      * @return  array
 	 */
-	public function add_order_box_action( $actions ) : array
+	public function add_order_box_action( array $actions ) : array
 	{
 		global $theorder;
 
@@ -178,8 +208,54 @@ class MFI_Orders
      * @param   object  $order
      * @return  void
 	 */
-	public function process_order_box_action( $order ) : void
+	public function process_order_box_action( object $order ) : void
 	{
         $this->send_order_to_muifabrica( $order->get_id(), [], $order );
 	}
+
+    /**
+     * Handles the order status change event.
+     *
+     * This function is triggered when the status of an order changes. It checks if the order contains
+     * any products supplied by MFI (Muifabrica Integration). If so, and if the status change is from
+     * "pending" or "on-hold" to "processing", it confirms the order with the MFI API.
+     *
+     * @since   1.0.0
+     * @param   int     $order_id       The ID of the order.
+     * @param   string  $old_status     The old status of the order.
+     * @param   string  $new_status     The new status of the order.
+     * @param   object  $order          The order object.
+     * @return  void
+     */
+    public function order_status_change( int $order_id, string $old_status, string $new_status, object $order )
+    {
+        if ( !$this->check_mfi_products( $order ) ) return;
+
+        $old = [ "pending", "on-hold" ];
+        $new = [ "processing"         ];
+
+        if ( in_array( $old_status, $old ) && in_array( $new_status, $new ) )
+        {
+            $data     = MFI_Helper::translate_order( $order, true );
+
+            $api      = new Muifabrica_Api();
+            $response = $api->confirm_order( $data );
+
+            if ( !$response )
+            {
+                $order->add_order_note( implode( "\n", [
+                    "Falha ao confirmar pedido para a Muifabrica!",
+                    "Erro: " . $api->get_error_message()
+                ] ) );
+
+                $order->save();
+
+                return;
+            }
+
+            $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_confirmed" ], true );
+            $order->add_order_note( "Pedido confirmado com sucesso!" );
+            $order->save();
+        }
+    }
 }
