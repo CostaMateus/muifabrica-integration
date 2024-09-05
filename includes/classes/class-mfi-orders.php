@@ -10,6 +10,7 @@
 namespace Muifabrica_Integration\Classes;
 
 use Muifabrica_Integration\Api\Muifabrica_Api;
+use Muifabrica_Integration\Classes\Helpers\MFI_Helper;
 
 class MFI_Orders
 {
