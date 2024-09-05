@@ -111,6 +111,7 @@ class Muifabrica_Api
 	 *
 	 * This function returns the current error message stored in the object.
 	 *
+     * @since 	1.0.0
 	 * @return 	string  	The current error message.
 	 */
 	public function get_error_message() : string
@@ -124,13 +125,48 @@ class Muifabrica_Api
 	 * This function appends a new error message to the existing error message.
 	 * If there is no existing error message, it sets the new message as the error message.
 	 *
+     * @since 	1.0.0
 	 * @param 	string 	$message 	The new error message to be added.
 	 * @return 	void
 	 */
 	private function concat_error_message( string $message ) : void
 	{
-		$this->error_message = ( !empty( $this->error_message ) ) ? "\n{$message}" : $message;
+		$this->error_message .= ( !empty( $this->error_message ) ) ? "\n{$message}" : $message;
 	}
+
+	/**
+	 * Logs data and concatenates error messages if necessary.
+	 *
+	 * This function logs the provided data with the specified log level and, if the log is an error,
+	 * it concatenates the error message to the existing error messages.
+	 *
+     * @since 	1.0.0
+	 * @param 	string 			$level 			The log level (e.g., "info", "error", "critical").
+	 * @param 	integer 		$success 		Indicates the success status (0 for failure, 1 for success).
+	 * @param 	string 			$function_name 	The name of the function where the log is being made.
+	 * @param 	integer 		$code 			The status or error code.
+	 * @param 	string 			$message 		The log or error message.
+	 * @param 	string 			$url 			The URL related to the log entry.
+	 * @param 	array 			$args 			The arguments or parameters related to the log entry.
+	 * @param 	array|WP_Error 	$response 		The response data or error object.
+	 * @param 	bool 			$is_error 		Indicates whether the log entry is an error.
+	 * @return 	void
+	 */
+    private function log_and_concat_error( string $level = "info",int $success = 0, string $function_name = "", int $code = 0,  string $message = "", string $url = "", array $args = [], array|WP_Error $response = [], bool $is_error = false ) : void
+    {
+        $this->log( $level, [
+            "success"  => $success,
+            "function" => $function_name,
+            "code"     => $code,
+            "message"  => $message,
+            "url"      => $url,
+            "args"     => $args,
+            "response" => $response,
+        ], $is_error );
+
+		if ( $is_error )
+			$this->concat_error_message( $message );
+    }
 
     /**
      * Get base URL based on environment.
@@ -151,41 +187,137 @@ class Muifabrica_Api
      */
     private function get_app_credentials() : array
     {
-        $app_id = ( $this->env != "prd" )
-					? get_option( \Muifabrica_Integration::METAS[ "app_id_hml"     ] )
-					: get_option( \Muifabrica_Integration::METAS[ "app_id"         ] );
-        $app_sc = ( $this->env != "prd" )
-					? get_option( \Muifabrica_Integration::METAS[ "app_secret_hml" ] )
-					: get_option( \Muifabrica_Integration::METAS[ "app_secret"     ] );
+        $suffix = ( $this->env != "prd" ) ? "_hml" : "";
+
+        $app_id = get_option( \Muifabrica_Integration::METAS[ "app_id{$suffix}"     ] );
+        $app_sc = get_option( \Muifabrica_Integration::METAS[ "app_secret{$suffix}" ] );
 
         return [ $app_id, $app_sc ];
+    }
+
+	/**
+	 * Makes an API request to the specified endpoint with the given method and data.
+	 *
+	 * @since 	1.0.0
+	 * @param 	string 	$endpoint 		The API endpoint to call.
+	 * @param 	string 	$method 		The HTTP method to use (GET, POST, PUT).
+	 * @param 	array 	$data 			The data to send with the request.
+	 * @param 	string 	$function_name 	The name of the function making the request.
+	 * @return 	array|false 			The response from the API or false on failure.
+	 */
+    private function api_request( string $endpoint, string $method = "GET", array $data = [], string $function_name = "" ) : array|false
+    {
+		// Get the base URL based on the environment.
+        $base_url                = $this->get_base_url();
+        $url                     = "{$base_url}/{$endpoint}";
+
+		// Get the base URL based on the environment.
+		list( $app_id, $app_sc ) = $this->get_app_credentials();
+
+		// Check if app credentials are missing.
+		if ( empty( $app_id ) || empty( $app_sc ) )
+		{
+			$message = "App_id e/ou App_secret ausentes";
+			$args    = [ "app_id" => $app_id, "app_secret" => $app_sc ];
+
+			// Log the error and concatenate the error message.
+			$this->log_and_concat_error( "error", 0, $function_name, 500, $message, $url, $args, [], true );
+
+			return false;
+		}
+
+		// Special handling for the generate_token function.
+		if ( $function_name == "generate_token" )
+		{
+			$data = [
+				"app_id"     => $app_id,
+				"app_secret" => $app_sc,
+			];
+
+			$url  = add_query_arg( $data, $url );
+
+			$args = [
+				"timeout" => 60,
+				"headers" => [
+					"Content-Type" => "application/json",
+				],
+			];
+		}
+		else
+		{
+			$token = $this->get_token();
+
+			if ( $token === false )
+				return false;
+
+			$args  = [
+				"timeout" => 60,
+				"headers" => [
+					"Content-Type"   => "application/json",
+					"Authori-key"    => $app_sc,
+					"Authori-zation" => "Bearer {$token}",
+				],
+			];
+		}
+
+		// Add the request body for POST and PUT methods.
+		if ( ( $method === "POST" || $method === "PUT" ) && $function_name != "generate_token" )
+		{
+            $args[ "body"        ] = wp_json_encode( $data );
+			$args[ "data_format" ] = "body";
+        }
+
+        try
+		{
+			// Make the API request based on the HTTP method.
+			switch ( $method )
+			{
+				case "POST":
+					$response = wp_remote_post( $url, $args );
+				break;
+
+				case "PUT":
+					$response = wp_remote_request( $url, array_merge( $args, [ "method" => "PUT" ] ) );
+				break;
+
+				case "GET":
+					$response = wp_remote_get( $url, $args );
+				break;
+
+				default:
+					throw new \Exception( "Método HTTP inválido" );
+				break;
+			}
+
+			// Handle the API response.
+            return $this->handle_api_response( $response, $url, $args, $function_name );
+        }
+		catch ( \Exception $e )
+		{
+			$message = "{$e->getCode()} {$e->getMessage()}";
+
+			// Log the exception and concatenate the error message.
+            $this->log_and_concat_error( $message, 0, $function_name, $e->getCode(), $url, true );
+
+            return false;
+        }
     }
 
     /**
      * Handle API response and errors.
 	 *
 	 * @since 	1.0.0
-	 * @param 	array|WP_Error 	$name
+	 * @param 	array|WP_Error 	$response
 	 * @param 	string 			$url
-	 * @param 	array 			$params
+	 * @param 	array 			$args
 	 * @param 	string 			$function_name
 	 * @return 	array|false
      */
-    private function handle_api_response( array|WP_Error $response, string $url, array $params, string $function_name ) : array|false
+    private function handle_api_response( array|WP_Error $response, string $url, array $args, string $function_name ) : array|false
     {
         if ( is_wp_error( $response ) )
-        {
-			$this->error_message = $response->get_error_message();
-
-            $this->log( "error", [
-                "success"  => 0,
-                "function" => $function_name,
-                "code"     => 500,
-				"message"  => $this->error_message,
-                "url"      => $url,
-                "args"     => $params,
-                "response" => $response,
-            ], true );
+		{
+            $this->log_and_concat_error( "error", 0, $function_name, 500, $response->get_error_message(), $url, $args, $response, true );
 
             return false;
         }
@@ -195,27 +327,15 @@ class Muifabrica_Api
 
         if ( $status < 200 || $status >= 300 || ( isset( $response_body[ "status" ] ) && $response_body[ "status" ] != 200 ) )
         {
-			if ( isset( $response_body[ "msg" ] ) )
-				$this->error_message = $response_body[ "msg" ];
+            $this->error_message = $response_body[ "msg" ] ?? $response_body[ "code" ] ?? "Erro não especificado e/ou desconhecido";
 
-			elseif ( isset( $response_body[ "code" ] ) )
-				$this->error_message = "código {$response_body[ "code" ]}";
-
-			else
-				$this->error_message = "Erro não especificado e/ou desconhecido";
-
-            $this->log( "error", [
-                "success"  => 0,
-                "function" => $function_name,
-                "code"     => $status,
-                "message"  => $this->error_message,
-                "url"      => $url,
-                "args"     => $params,
-                "response" => $response_body,
-            ] );
+            $this->log_and_concat_error( "error", 0, $function_name, $status, $this->error_message, $url, $args, $response_body, true );
 
             return false;
         }
+
+		// Log if debug enabled
+		$this->log_and_concat_error( "info", 1, $function_name, $status, "success", $url, $args, $response_body, false );
 
         return $response_body;
     }
@@ -223,52 +343,27 @@ class Muifabrica_Api
 	/**
 	 * Retrives the current dollar price in Brazilliasn Real (BRL) from the Awesome API.
 	 *
+     * @since 	1.0.0
 	 * @return 	string|false 	The current dollar price or false.
 	 */
 	public function get_dollar_price() : string|false
 	{
-		$dollar = get_transient( \Muifabrica_Integration::METAS[ "dollar" ] );
+		$dollar   = get_transient( \Muifabrica_Integration::METAS[ "dollar" ] );
 
 		if ( $dollar !== false )
 			return $dollar;
 
-        try
-        {
-			$url           = "https://economia.awesomeapi.com.br/last/USD-BRL";
-            $response      = wp_remote_get( $url );
+		$endpoint = "https://economia.awesomeapi.com.br/last/USD-BRL";
+		$response = $this->api_request( $endpoint, "GET", [], "get_dollar_price" );
 
-            $response_body = $this->handle_api_response( $response, $url, [], "get_dollar_price" );
+        if ( !$response )
+			return false;
 
-            if ( !$response_body )
-			{
-				$this->concat_error_message( "Erro ao obter valor do dólar" );
+		$dollar   = number_format( ( float ) $response[ "USDBRL" ][ "bid" ], 2, ",", "" );
 
-				return false;
-			}
+		set_transient( \Muifabrica_Integration::METAS[ "dollar" ], $dollar, ( 15 * MINUTE_IN_SECONDS ) );
 
-			$dollar        = $response_body[ "USDBRL" ][ "bid" ];
-			$dollar        = number_format( ( float ) $dollar, 2, ",", "" );
-
-			set_transient( \Muifabrica_Integration::METAS[ "dollar" ], $dollar, ( 15 * MINUTE_IN_SECONDS ) );
-
-			return $dollar;
-        }
-        catch ( Exception $e )
-        {
-            $this->log( "critical", [
-                "success"  => 0,
-                "function" => "get_dollar_price",
-                "code"     => $e->getCode(),
-                "message"  => $e->getMessage(),
-                "url"      => $url,
-                "args"     => $args,
-                "response" => null,
-            ], true );
-
-			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
-
-            return false;
-        }
+		return $dollar;
 	}
 
 	/**
@@ -279,92 +374,15 @@ class Muifabrica_Api
 	 */
 	public function generate_token() : bool
 	{
-        $base_url = $this->get_base_url();
-        $url      = "{$base_url}/" . $this->urls[ "access_token" ];
+		$endpoint = $this->urls[ "access_token" ];
+		$response = $this->api_request( $endpoint, "POST", [], "generate_token" );
 
-        list( $app_id, $app_sc ) = $this->get_app_credentials();
-
-		if ( empty( $app_id ) || empty( $app_sc ) )
-		{
-			$message = "App_id e/ou App_secret, ausentes";
-
-			$this->log( "error", [
-				"success"  => 0, // false
-				"function" => "generate_token",
-				"code"     => 500,
-				"message"  => $message,
-				"url"      => $url,
-				"args"     => [ $this->env, $app_id, $app_sc ],
-				"response" => null,
-			], true );
-
-			$this->concat_error_message( $message );
-
+        if ( !$response )
 			return false;
-		}
 
-		$params   = [
-			"app_id"  => $app_id,
-			"app_key" => $app_sc,
-		];
+		set_transient( \Muifabrica_Integration::METAS[ "access_token" ], $response[ "data" ][ "token" ], DAY_IN_SECONDS );
 
-		$url      = add_query_arg( $params, $url );
-
-		$args     = [
-			"timeout" => 60,
-			"headers" => [
-				"Content-Type" => "application/json",
-			],
-		];
-
-		try
-		{
-			// Make API call
-			$response      = wp_remote_post( $url, $args );
-
-			$params        = array_merge( $args, $params );
-
-            $response_body = $this->handle_api_response( $response, $url, $params, "generate_token" );
-
-            if ( !$response_body )
-			{
-				$this->concat_error_message( "Falha ao obter token" );
-
-				return false;
-			}
-
-			// Set the access token for API authentication
-			set_transient( \Muifabrica_Integration::METAS[ "access_token" ], $response_body[ "data" ][ "token" ], DAY_IN_SECONDS );
-
-			// Log if debug enabled
-			$this->log( "info", [
-				"success"  => 1, // true
-				"function" => "generate_token",
-				"code"     => wp_remote_retrieve_response_code( $response ),
-				"message"  => "Success",
-				"url"      => $url,
-				"args"     => $params,
-				"response" => $response_body,
-			] );
-
-			return true;
-		}
-		catch ( Exception $e )
-		{
-			$this->log( "critical", [
-				"success"  => 0, // false
-				"function" => "generate_token",
-				"code"     => $e->getCode(),
-				"message"  => $e->getMessage(),
-				"url"      => $url,
-				"args"     => array_merge( $args, $params ),
-				"response" => $response ?? null,
-			], true );
-
-			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
-
-			return false;
-		}
+        return true;
 	}
 
 	/**
@@ -378,14 +396,9 @@ class Muifabrica_Api
 		$token = get_transient( \Muifabrica_Integration::METAS[ "access_token" ] );
 
 		if ( $token === false )
-		{
-			if ( !$this->generate_token() )
-				return false;
+			$this->generate_token();
 
-			$token = get_transient( \Muifabrica_Integration::METAS[ "access_token" ] );
-		}
-
-		return $token;
+		return get_transient( \Muifabrica_Integration::METAS[ "access_token" ] );
 	}
 
 	/**
@@ -396,86 +409,10 @@ class Muifabrica_Api
 	 */
 	public function get_categories() : array|false
 	{
-        $base_url = $this->get_base_url();
-        $url      = "{$base_url}/" . $this->urls[ "category" ];
+		$endpoint = $this->urls[ "category" ];
+		$response = $this->api_request( $endpoint, "GET", [], "get_categories" );
 
-        list( $app_id, $app_sc ) = $this->get_app_credentials();
-
-		if ( empty( $app_id ) || empty( $app_sc ) )
-		{
-			$message = "App_id e/ou App_secret, ausentes";
-
-			$this->log( "error", [
-				"success"  => 0, // false
-				"function" => "get_categories",
-				"code"     => 500,
-				"message"  => $message,
-				"url"      => $url,
-				"args"     => [ $this->env, $app_id, $app_sc ],
-				"response" => null,
-			], true );
-
-			$this->concat_error_message( $message );
-
-			return false;
-		}
-
-		$token    = $this->get_token();
-
-		if ( $token === false )
-			return false;
-
-		$args     = [
-			"timeout" => 60,
-			"headers" => [
-				"Content-Type"   => "application/json",
-				"Authori-key"    => $app_sc,
-				"Authori-zation" => "Beare {$token}",
-			],
-		];
-
-        try
-        {
-            $response      = wp_remote_get( $url, $args );
-
-            $response_body = $this->handle_api_response( $response, $url, $args, "get_categories" );
-
-            if ( !$response_body )
-			{
-				$this->concat_error_message( "Falha ao obter categorias" );
-
-				return false;
-			}
-
-			// Log if debug enabled
-			$this->log( "info", [
-				"success"  => 1, // true
-				"function" => "get_categories",
-				"code"     => wp_remote_retrieve_response_code( $response ),
-				"message"  => "Success",
-				"url"      => $url,
-				"args"     => $args,
-				"response" => $response_body,
-			] );
-
-            return $response_body[ "data" ][ "list" ];
-        }
-        catch ( Exception $e )
-        {
-            $this->log( "critical", [
-                "success"  => 0,
-                "function" => "get_categories",
-                "code"     => $e->getCode(),
-                "message"  => $e->getMessage(),
-                "url"      => $url,
-                "args"     => $args,
-                "response" => null,
-            ], true );
-
-			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
-
-            return false;
-        }
+		return $response[ "data" ][ "list" ] ?? false;
 	}
 
 	/**
@@ -487,87 +424,10 @@ class Muifabrica_Api
 	 */
 	public function get_product_detail( int $product_id ) : array|false
 	{
-		$detail_url = $this->urls[ "product" ][ "details" ];
-        $base_url   = $this->get_base_url();
-        $url        = "{$base_url}/{$detail_url}/{$product_id}";
+		$endpoint = $this->urls[ "product" ][ "details" ] . "/{$product_id}";
+		$response = $this->api_request( $endpoint, "GET", [], "get_product_detail" );
 
-        list( $app_id, $app_sc ) = $this->get_app_credentials();
-
-        if ( empty( $app_id ) || empty( $app_sc ) )
-        {
-			$message = "App_id e/ou App_secret, ausentes";
-
-            $this->log( "error", [
-                "success"  => 0,
-                "function" => "get_product_detail",
-                "code"     => 500,
-                "message"  => $message,
-                "url"      => $url,
-                "args"     => [ $this->env, $app_id, $app_sc ],
-                "response" => null,
-            ], true );
-
-			$this->concat_error_message( $message );
-
-            return false;
-        }
-
-        $token      = $this->get_token();
-
-        if ( $token === false )
-			return false;
-
-        $args       = [
-            "timeout" => 60,
-            "headers" => [
-                "Content-Type"   => "application/json",
-                "Authori-key"    => $app_sc,
-                "Authori-zation" => "Bearer {$token}",
-            ],
-        ];
-
-        try
-        {
-            $response      = wp_remote_get( $url, $args );
-
-            $response_body = $this->handle_api_response( $response, $url, $args, "get_product_detail" );
-
-            if ( !$response_body )
-			{
-				$this->concat_error_message( "Erro ao obter detalhes do produto" );
-
-				return false;
-			}
-
-			// Log if debug enabled
-			$this->log( "info", [
-				"success"  => 1, // true
-				"function" => "get_product_detail",
-				"code"     => wp_remote_retrieve_response_code( $response ),
-				"message"  => "Success",
-				"url"      => $url,
-				"args"     => $args,
-				"response" => $response_body,
-			] );
-
-            return $response_body[ "data" ];
-        }
-        catch ( Exception $e )
-        {
-            $this->log( "critical", [
-                "success"  => 0,
-                "function" => "get_product_detail",
-                "code"     => $e->getCode(),
-                "message"  => $e->getMessage(),
-                "url"      => $url,
-                "args"     => $args,
-                "response" => null,
-            ], true );
-
-			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
-
-            return false;
-        }
+		return $response[ "data" ] ?? false;
 	}
 
 	/**
@@ -578,48 +438,8 @@ class Muifabrica_Api
 	 */
 	public function get_products() : array|false
 	{
-        $base_url   = $this->get_base_url();
-        $url        = "{$base_url}/" . $this->urls[ "product" ][ "list" ];
-
-        list( $app_id, $app_sc ) = $this->get_app_credentials();
-
-		if ( empty( $app_id ) || empty( $app_sc ) )
-		{
-			$message = "App_id e/ou App_secret, ausentes";
-
-			$this->log( "error", [
-				"success"  => 0, // false
-				"function" => "get_products",
-				"code"     => 500,
-				"message"  => $message,
-				"url"      => $url,
-				"args"     => [ $this->env, $app_id, $app_sc ],
-				"response" => null,
-			], true );
-
-			$this->concat_error_message( $message );
-
-			return false;
-		}
-
-		$token      = $this->get_token();
-
-		if ( $token === false )
-			return false;
-
-		$args       = [
-			"timeout" => 60,
-			"headers" => [
-				"Content-Type"   => "application/json",
-				"Authori-key"    => $app_sc,
-				"Authori-zation" => "Beare {$token}",
-			],
-		];
-
-		$limit      = 50;
-		$aux_prds   = [];
+		$aux_prdts  = [];
 		$products   = [];
-
 		$categories = $this->get_categories();
 
 		if ( $categories === false )
@@ -632,52 +452,26 @@ class Muifabrica_Api
 
 			do
 			{
-				try
+				$endpoint  = $this->urls[ "product" ][ "list" ] . "?cate_id={$category[ "id" ]}&page={$page}&limit={$limit}";
+				$response  = $this->api_request( $endpoint, "GET", [], "get_products" );
+
+				if ( !$response )
+					return false;
+
+				if ( $response[ "data" ][ "count" ] >= 1 )
 				{
-					$full_url      = "{$url}?cate_id=" . $category[ "id" ] . "&page={$page}&limit={$limit}";
-
-					$response      = wp_remote_get( $full_url, $args );
-
-					$response_body = $this->handle_api_response( $response, $full_url, $args, "get_products" );
-
-					if ( !$response_body )
-					{
-						$this->concat_error_message( "Erro ao obter produtos" );
-
-						return false;
-					}
-
-					if ( $response_body[ "data" ][ "count" ] >= 1 )
-					{
-						$list     = $response_body[ "data" ][ "list" ];
-						$aux_prds = array_merge( $aux_prds, $list );
-					}
-
-					$page++;
-
-					$count = $response_body[ "data" ][ "count" ] ?? 0;
 				}
-				catch ( Exception $e )
-				{
-					$this->log( "critical", [
-						"success"  => 0, // false
-						"function" => "get_products",
-						"code"     => $e->getCode(),
-						"message"  => $e->getMessage(),
-						"url"      => $full_url,
-						"args"     => $args,
-						"response" => $response ?? null,
-					], true );
 
-					$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
+				$count     = $response[ "data" ][ "count" ] ?? 0;
+				$list      = $response[ "data" ][ "list"  ] ?? [];
+				$aux_prdts = array_merge( $aux_prdts, $list );
 
-					continue;
-				}
+				$page++;
 			}
 			while ( $count == $limit );
 		}
 
-		foreach ( $aux_prds as $product )
+		foreach ( $aux_prdts as $product )
 		{
 			$details = $this->get_product_detail( $product[ "id" ] );
 
@@ -697,89 +491,10 @@ class Muifabrica_Api
 	 */
 	public function get_freight( array $data ) : array|false
 	{
-        $base_url = $this->get_base_url();
-        $url      = "{$base_url}/" . $this->urls[ "freight" ];
+		$endpoint = $this->urls[ "freight" ];
+		$response = $this->api_request( $endpoint, "POST", $data, "get_freight" );
 
-        list( $app_id, $app_sc ) = $this->get_app_credentials();
-
-		if ( empty( $app_id ) || empty( $app_sc ) )
-		{
-			$message = "App_id e/ou App_secret, ausentes";
-
-			$this->log( "error", [
-				"success"  => 0, // false
-				"function" => "get_freight",
-				"code"     => 500,
-				"message"  => $message,
-				"url"      => $url,
-				"args"     => [ $this->env, $app_id, $app_sc ],
-				"response" => null,
-			], true );
-
-			$this->concat_error_message( $message );
-
-			return false;
-		}
-
-		$token    = $this->get_token();
-
-		if ( $token === false )
-			return false;
-
-		$args     = [
-			"timeout"     => 60,
-			"data_format" => "body",
-			"body"        => wp_json_encode( $data ),
-			"headers"     => [
-				"Content-Type"   => "application/json",
-				"Authori-key"    => $app_sc,
-				"Authori-zation" => "Beare {$token}",
-			],
-		];
-
-		try
-		{
-			// Make API call
-			$response      = wp_remote_post( $url, $args );
-
-            $response_body = $this->handle_api_response( $response, $url, $args, "get_freight" );
-
-            if ( !$response_body )
-			{
-				$this->concat_error_message( "Erro ao obter valor do frete" );
-
-				return false;
-			}
-
-			// Log if debug enabled
-			$this->log( "info", [
-				"success"  => 1, // true
-				"function" => "get_freight",
-				"code"     => wp_remote_retrieve_response_code( $response ),
-				"message"  => "Success",
-				"url"      => $url,
-				"args"     => $args,
-				"response" => $response_body,
-			] );
-
-			return $response_body[ "data" ];
-		}
-		catch ( Exception $e )
-		{
-			$this->log( "critical", [
-				"success"  => 0, // false
-				"function" => "get_freight",
-				"code"     => $e->getCode(),
-				"message"  => $e->getMessage(),
-				"url"      => $url,
-				"args"     => $args,
-				"response" => $response ?? null,
-			], true );
-
-			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
-
-			return false;
-		}
+		return $response[ "data" ] ?? false;
 	}
 
 	/**
@@ -794,88 +509,27 @@ class Muifabrica_Api
 	 */
 	public function post_order( array $data ) : array|false
 	{
-        $base_url   = $this->get_base_url();
-        $url        = "{$base_url}/" . $this->urls[ "order" ][ "saved" ];
+		$endpoint = $this->urls[ "order" ][ "saved" ];
+		$response = $this->api_request( $endpoint, "POST", $data, "post_order" );
 
-        list( $app_id, $app_sc ) = $this->get_app_credentials();
+		return $response[ "data" ] ?? false;
+	}
 
-		if ( empty( $app_id ) || empty( $app_sc ) )
-		{
-			$message = "App_id e/ou App_secret, ausentes";
+	/**
+	 * Confirm order to the API.
+	 *
+	 * This function sends a confirmation order to the API and handles the response.
+	 * It logs errors and concatenates error messages if any issues occur during the process.
+	 *
+	 * @since 	1.0.0
+	 * @param 	array 	$data 	The order data to be sent.
+	 * @return 	array|false 	The response data from the API or false on failure.
+	 */
+	public function confirm_order( array $data ) : array|false
+	{
+		$endpoint = $this->urls[ "order" ][ "confirmation" ];
+		$response = $this->api_request( $endpoint, "POST", $data, "confirm_order" );
 
-			$this->log( "error", [
-				"success"  => 0, // false
-				"function" => "post_order",
-				"code"     => 500,
-				"message"  => $message,
-				"url"      => $url,
-				"args"     => [ $this->env, $app_id, $app_sc ],
-				"response" => null,
-			], true );
-
-			$this->concat_error_message( $message );
-
-			return false;
-		}
-
-		$token      = $this->get_token();
-
-		if ( $token === false )
-			return false;
-
-		$args       = [
-			"timeout"     => 60,
-			"data_format" => "body",
-			"body"        => wp_json_encode( $data ),
-			"headers"     => [
-				"Content-Type"   => "application/json",
-				"Authori-key"    => $app_sc,
-				"Authori-zation" => "Beare {$token}",
-			],
-		];
-
-		try
-		{
-			// Make API call
-			$response      = wp_remote_post( $url, $args );
-
-            $response_body = $this->handle_api_response( $response, $url, $args, "get_freight" );
-
-            if ( !$response_body )
-			{
-				$this->concat_error_message( "Erro ao enviar pedido" );
-
-				return false;
-			}
-
-			// Log if debug enabled
-			$this->log( "info", [
-				"success"  => 1, // true
-				"function" => "post_order",
-				"code"     => wp_remote_retrieve_response_code( $response ),
-				"message"  => "Success",
-				"url"      => $url,
-				"args"     => $args,
-				"response" => $response_body,
-			] );
-
-			return $response_body[ "data" ];
-		}
-		catch ( Exception $e )
-		{
-			$this->log( "critical", [
-				"success"  => 0, // false
-				"function" => "post_order",
-				"code"     => $e->getCode(),
-				"message"  => $e->getMessage(),
-				"url"      => $url,
-				"args"     => $args,
-				"response" => $response ?? null,
-			], true );
-
-			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
-
-			return false;
-		}
+		return $response[ "data" ] ?? false;
 	}
 }
