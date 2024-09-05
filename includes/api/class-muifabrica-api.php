@@ -102,11 +102,8 @@ class Muifabrica_Api
      */
 	private function log( string $type, array $data, bool $is_error = false ) : void
 	{
-		// Get instance of Nickelpay
-		$mfi = \Muifabrica_Integration::init();
-
 		// Log data with appropriate log level
-		$mfi->log( $type, wc_print_r( $data, true ), $is_error );
+		\Muifabrica_Integration::log( $type, wc_print_r( $data, true ), $is_error );
 	}
 
 	/**
@@ -450,6 +447,17 @@ class Muifabrica_Api
 				return false;
 			}
 
+			// Log if debug enabled
+			$this->log( "info", [
+				"success"  => 1, // true
+				"function" => "get_categories",
+				"code"     => wp_remote_retrieve_response_code( $response ),
+				"message"  => "Success",
+				"url"      => $url,
+				"args"     => $args,
+				"response" => $response_body,
+			] );
+
             return $response_body[ "data" ][ "list" ];
         }
         catch ( Exception $e )
@@ -530,6 +538,17 @@ class Muifabrica_Api
 
 				return false;
 			}
+
+			// Log if debug enabled
+			$this->log( "info", [
+				"success"  => 1, // true
+				"function" => "get_product_detail",
+				"code"     => wp_remote_retrieve_response_code( $response ),
+				"message"  => "Success",
+				"url"      => $url,
+				"args"     => $args,
+				"response" => $response_body,
+			] );
 
             return $response_body[ "data" ];
         }
@@ -786,7 +805,7 @@ class Muifabrica_Api
 
 			$this->log( "error", [
 				"success"  => 0, // false
-				"function" => "get_products",
+				"function" => "post_order",
 				"code"     => 500,
 				"message"  => $message,
 				"url"      => $url,
@@ -832,7 +851,7 @@ class Muifabrica_Api
 			// Log if debug enabled
 			$this->log( "info", [
 				"success"  => 1, // true
-				"function" => "get_freight",
+				"function" => "post_order",
 				"code"     => wp_remote_retrieve_response_code( $response ),
 				"message"  => "Success",
 				"url"      => $url,
@@ -846,7 +865,7 @@ class Muifabrica_Api
 		{
 			$this->log( "critical", [
 				"success"  => 0, // false
-				"function" => "get_freight",
+				"function" => "post_order",
 				"code"     => $e->getCode(),
 				"message"  => $e->getMessage(),
 				"url"      => $url,
