@@ -80,7 +80,7 @@ class Muifabrica_Api
 				"saved"        => "order",          // POST
 				"notes"        => "order/remark",   // PUT
 				"receive"      => "order/receive",  // PUT
-				"cancel"       => "order/cancel",   // PUT
+				"cancel"       => "order/cancle",   // PUT
 				"list"         => "order/list",     // GET
 				"details"      => "order",          // GET
 			],
@@ -529,6 +529,25 @@ class Muifabrica_Api
 	{
 		$endpoint = $this->urls[ "order" ][ "confirmation" ];
 		$response = $this->api_request( $endpoint, "POST", $data, "confirm_order" );
+
+		return $response[ "data" ] ?? false;
+	}
+
+	/**
+	 * Cancel order to the API.
+	 *
+	 * This function sends a cancelation order to the API and handles the response.
+	 * It logs errors and concatenates error messages if any issues occur during the process.
+	 *
+	 * @since 	1.0.0
+	 * @param 	array 	$data 		The order data to be sent.
+	 * @param 	int 	$order_id 	The MFI order id.
+	 * @return 	array|false 		The response data from the API or false on failure.
+	 */
+	public function cancel_order( array $data, int $order_id ) : array|false
+	{
+		$endpoint = $this->urls[ "order" ][ "cancel" ] . "/{$order_id}";
+		$response = $this->api_request( $endpoint, "PUT", $data, "cancel_order" );
 
 		return $response[ "data" ] ?? false;
 	}
