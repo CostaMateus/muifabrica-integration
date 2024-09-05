@@ -49,6 +49,13 @@ class Muifabrica_Api
 	protected $env;
 
 	/**
+	 * Error message
+	 *
+	 * @var 	string
+	 */
+	protected $error_message;
+
+	/**
 	 * Constructor.
      * Initializes the class.
 	 *
@@ -102,6 +109,27 @@ class Muifabrica_Api
 		$mfi->log( $type, wc_print_r( $data, true ), $is_error );
 	}
 
+	/**
+	 * Undocumented function
+	 *
+	 * @return 	string
+	 */
+	public function get_error_message() : string
+	{
+		return $this->error_message;
+	}
+
+	/**
+	 * Undocumented function
+	 *
+	 * @param 	string 	$message
+	 * @return 	void
+	 */
+	private function concat_error_message( string $message ) : void
+	{
+		$this->error_message = ( !empty( $this->error_message ) ) ? "\n{$message}" : $message;
+	}
+
     /**
      * Get base URL based on environment.
 	 *
@@ -145,11 +173,13 @@ class Muifabrica_Api
     {
         if ( is_wp_error( $response ) )
         {
+			$this->error_message = $response->get_error_message();
+
             $this->log( "error", [
                 "success"  => 0,
                 "function" => $function_name,
                 "code"     => 500,
-                "message"  => $response->get_error_message(),
+				"message"  => $this->error_message,
                 "url"      => $url,
                 "args"     => $params,
                 "response" => $response,
@@ -163,11 +193,20 @@ class Muifabrica_Api
 
         if ( $status < 200 || $status >= 300 || ( isset( $response_body[ "status" ] ) && $response_body[ "status" ] != 200 ) )
         {
+			if ( isset( $response_body[ "msg" ] ) )
+				$this->error_message = $response_body[ "msg" ];
+
+			elseif ( isset( $response_body[ "code" ] ) )
+				$this->error_message = "código {$response_body[ "code" ]}";
+
+			else
+				$this->error_message = "Erro não especificado e/ou desconhecido";
+
             $this->log( "error", [
                 "success"  => 0,
                 "function" => $function_name,
                 "code"     => $status,
-                "message"  => isset( $response_body[ "msg" ] ) ? $response_body[ "msg" ] : "",
+                "message"  => $this->error_message,
                 "url"      => $url,
                 "args"     => $params,
                 "response" => $response_body,
@@ -199,7 +238,11 @@ class Muifabrica_Api
             $response_body = $this->handle_api_response( $response, $url, [], "get_dollar_price" );
 
             if ( !$response_body )
+			{
+				$this->concat_error_message( "Erro ao obter valor do dólar" );
+
 				return false;
+			}
 
 			$dollar        = $response_body[ "USDBRL" ][ "bid" ];
 			$dollar        = number_format( ( float ) $dollar, 2, ",", "" );
@@ -213,12 +256,14 @@ class Muifabrica_Api
             $this->log( "critical", [
                 "success"  => 0,
                 "function" => "get_dollar_price",
-                "code"     => 500,
+                "code"     => $e->getCode(),
                 "message"  => $e->getMessage(),
                 "url"      => $url,
                 "args"     => $args,
                 "response" => null,
             ], true );
+
+			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
 
             return false;
         }
@@ -239,15 +284,19 @@ class Muifabrica_Api
 
 		if ( empty( $app_id ) || empty( $app_sc ) )
 		{
+			$message = "App_id e/ou App_secret, ausentes";
+
 			$this->log( "error", [
 				"success"  => 0, // false
 				"function" => "generate_token",
 				"code"     => 500,
-				"message"  => "Missing app_id or app_secret",
+				"message"  => $message,
 				"url"      => $url,
 				"args"     => [ $this->env, $app_id, $app_sc ],
 				"response" => null,
 			], true );
+
+			$this->concat_error_message( $message );
 
 			return false;
 		}
@@ -276,7 +325,11 @@ class Muifabrica_Api
             $response_body = $this->handle_api_response( $response, $url, $params, "generate_token" );
 
             if ( !$response_body )
+			{
+				$this->concat_error_message( "Falha ao obter token" );
+
 				return false;
+			}
 
 			// Set the access token for API authentication
 			set_transient( \Muifabrica_Integration::METAS[ "access_token" ], $response_body[ "data" ][ "token" ], DAY_IN_SECONDS );
@@ -305,6 +358,8 @@ class Muifabrica_Api
 				"args"     => array_merge( $args, $params ),
 				"response" => $response ?? null,
 			], true );
+
+			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
 
 			return false;
 		}
@@ -346,15 +401,19 @@ class Muifabrica_Api
 
 		if ( empty( $app_id ) || empty( $app_sc ) )
 		{
+			$message = "App_id e/ou App_secret, ausentes";
+
 			$this->log( "error", [
 				"success"  => 0, // false
 				"function" => "get_categories",
 				"code"     => 500,
-				"message"  => "Missing app_id or app_secret",
+				"message"  => $message,
 				"url"      => $url,
 				"args"     => [ $this->env, $app_id, $app_sc ],
 				"response" => null,
 			], true );
+
+			$this->concat_error_message( $message );
 
 			return false;
 		}
@@ -380,7 +439,11 @@ class Muifabrica_Api
             $response_body = $this->handle_api_response( $response, $url, $args, "get_categories" );
 
             if ( !$response_body )
+			{
+				$this->concat_error_message( "Falha ao obter categorias" );
+
 				return false;
+			}
 
             return $response_body[ "data" ][ "list" ];
         }
@@ -389,12 +452,14 @@ class Muifabrica_Api
             $this->log( "critical", [
                 "success"  => 0,
                 "function" => "get_categories",
-                "code"     => 500,
+                "code"     => $e->getCode(),
                 "message"  => $e->getMessage(),
                 "url"      => $url,
                 "args"     => $args,
                 "response" => null,
             ], true );
+
+			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
 
             return false;
         }
@@ -417,15 +482,19 @@ class Muifabrica_Api
 
         if ( empty( $app_id ) || empty( $app_sc ) )
         {
+			$message = "App_id e/ou App_secret, ausentes";
+
             $this->log( "error", [
                 "success"  => 0,
                 "function" => "get_product_detail",
                 "code"     => 500,
-                "message"  => "Missing app_id or app_secret",
+                "message"  => $message,
                 "url"      => $url,
                 "args"     => [ $this->env, $app_id, $app_sc ],
                 "response" => null,
             ], true );
+
+			$this->concat_error_message( $message );
 
             return false;
         }
@@ -451,7 +520,11 @@ class Muifabrica_Api
             $response_body = $this->handle_api_response( $response, $url, $args, "get_product_detail" );
 
             if ( !$response_body )
+			{
+				$this->concat_error_message( "Erro ao obter detalhes do produto" );
+
 				return false;
+			}
 
             return $response_body[ "data" ];
         }
@@ -460,12 +533,14 @@ class Muifabrica_Api
             $this->log( "critical", [
                 "success"  => 0,
                 "function" => "get_product_detail",
-                "code"     => 500,
+                "code"     => $e->getCode(),
                 "message"  => $e->getMessage(),
                 "url"      => $url,
                 "args"     => $args,
                 "response" => null,
             ], true );
+
+			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
 
             return false;
         }
@@ -486,15 +561,19 @@ class Muifabrica_Api
 
 		if ( empty( $app_id ) || empty( $app_sc ) )
 		{
+			$message = "App_id e/ou App_secret, ausentes";
+
 			$this->log( "error", [
 				"success"  => 0, // false
 				"function" => "get_products",
 				"code"     => 500,
-				"message"  => "Missing app_id or app_secret",
+				"message"  => $message,
 				"url"      => $url,
 				"args"     => [ $this->env, $app_id, $app_sc ],
 				"response" => null,
 			], true );
+
+			$this->concat_error_message( $message );
 
 			return false;
 		}
@@ -538,7 +617,11 @@ class Muifabrica_Api
 					$response_body = $this->handle_api_response( $response, $full_url, $args, "get_products" );
 
 					if ( !$response_body )
+					{
+						$this->concat_error_message( "Erro ao obter produtos" );
+
 						return false;
+					}
 
 					if ( $response_body[ "data" ][ "count" ] >= 1 )
 					{
@@ -561,6 +644,8 @@ class Muifabrica_Api
 						"args"     => $args,
 						"response" => $response ?? null,
 					], true );
+
+					$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
 
 					continue;
 				}
@@ -595,15 +680,19 @@ class Muifabrica_Api
 
 		if ( empty( $app_id ) || empty( $app_sc ) )
 		{
+			$message = "App_id e/ou App_secret, ausentes";
+
 			$this->log( "error", [
 				"success"  => 0, // false
 				"function" => "get_freight",
 				"code"     => 500,
-				"message"  => "Missing app_id or app_secret",
+				"message"  => $message,
 				"url"      => $url,
 				"args"     => [ $this->env, $app_id, $app_sc ],
 				"response" => null,
 			], true );
+
+			$this->concat_error_message( $message );
 
 			return false;
 		}
@@ -632,7 +721,11 @@ class Muifabrica_Api
             $response_body = $this->handle_api_response( $response, $url, $args, "get_freight" );
 
             if ( !$response_body )
+			{
+				$this->concat_error_message( "Erro ao obter valor do frete" );
+
 				return false;
+			}
 
 			// Log if debug enabled
 			$this->log( "info", [
@@ -659,6 +752,8 @@ class Muifabrica_Api
 				"response" => $response ?? null,
 			], true );
 
+			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
+
 			return false;
 		}
 	}
@@ -666,26 +761,32 @@ class Muifabrica_Api
 	/**
 	 * Undocumented function
 	 *
-	 * @return 	void
+	 * @since 	1.0.0
+	 * @param 	array 	$data
+	 * @return 	array|false
 	 */
-	public function post_order() : false
+	public function post_order( array $data ) : array|false
 	{
         $base_url   = $this->get_base_url();
-        $url        = "{$base_url}/" . $this->urls[ "product" ][ "list" ];
+        $url        = "{$base_url}/" . $this->urls[ "order" ][ "saved" ];
 
         list( $app_id, $app_sc ) = $this->get_app_credentials();
 
 		if ( empty( $app_id ) || empty( $app_sc ) )
 		{
+			$message = "App_id e/ou App_secret, ausentes";
+
 			$this->log( "error", [
 				"success"  => 0, // false
 				"function" => "get_products",
 				"code"     => 500,
-				"message"  => "Missing app_id or app_secret",
+				"message"  => $message,
 				"url"      => $url,
 				"args"     => [ $this->env, $app_id, $app_sc ],
 				"response" => null,
 			], true );
+
+			$this->concat_error_message( $message );
 
 			return false;
 		}
@@ -695,5 +796,59 @@ class Muifabrica_Api
 		if ( $token === false )
 			return false;
 
+		$args       = [
+			"timeout"     => 60,
+			"data_format" => "body",
+			"body"        => wp_json_encode( $data ),
+			"headers"     => [
+				"Content-Type"   => "application/json",
+				"Authori-key"    => $app_sc,
+				"Authori-zation" => "Beare {$token}",
+			],
+		];
+
+		try
+		{
+			// Make API call
+			$response      = wp_remote_post( $url, $args );
+
+            $response_body = $this->handle_api_response( $response, $url, $args, "get_freight" );
+
+            if ( !$response_body )
+			{
+				$this->concat_error_message( "Erro ao enviar pedido" );
+
+				return false;
+			}
+
+			// Log if debug enabled
+			$this->log( "info", [
+				"success"  => 1, // true
+				"function" => "get_freight",
+				"code"     => wp_remote_retrieve_response_code( $response ),
+				"message"  => "Success",
+				"url"      => $url,
+				"args"     => $args,
+				"response" => $response_body,
+			] );
+
+			return $response_body[ "data" ];
+		}
+		catch ( Exception $e )
+		{
+			$this->log( "critical", [
+				"success"  => 0, // false
+				"function" => "get_freight",
+				"code"     => $e->getCode(),
+				"message"  => $e->getMessage(),
+				"url"      => $url,
+				"args"     => $args,
+				"response" => $response ?? null,
+			], true );
+
+			$this->concat_error_message( "{$e->getCode()} {$e->getMessage()}" );
+
+			return false;
+		}
 	}
 }
