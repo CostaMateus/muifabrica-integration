@@ -1,7 +1,5 @@
 <?php
 /**
- * TODO verificar
- *
  * Orders class.
  *
  * @author 		Mateus Costa <mateus@costamateus.com.br>
@@ -16,8 +14,6 @@ use Muifabrica_Integration\Api\Muifabrica_Api;
 class MFI_Orders
 {
     /**
-     * TODO verificar
-     *
      * Constructor
      *
      * @since   1.0.0
@@ -35,8 +31,6 @@ class MFI_Orders
     }
 
     /**
-     * TODO verificar
-     *
      * Send order to suppliers
      *
      * @since   1.0.0
@@ -47,66 +41,45 @@ class MFI_Orders
      */
     public function send_order_to_muifabrica( $order_id, $posted_data, $order ) : void
     {
-        $api         = null;
-        $products    = [];
-        $customer_ip = $order->get_customer_ip_address();
-
-        $billing     = [
-            "first_name" => $order->get_billing_first_name(),
-            "last_name"  => $order->get_billing_last_name(),
-            "company"    => $order->get_billing_company(),
-            "address_1"  => $order->get_billing_address_1(),
-            "address_2"  => $order->get_billing_address_2(),
-            "city"       => $order->get_billing_city(),
-            "state"      => $order->get_billing_state(),
-            "postcode"   => $order->get_billing_postcode(),
-            "country"    => $order->get_billing_country(),
-            "email"      => $order->get_billing_email(),
-            "phone"      => $order->get_billing_phone(),
-        ];
-
-        $shipping    = [
-            "first_name" => $order->get_shipping_first_name(),
-            "last_name"  => $order->get_shipping_last_name(),
-            "company"    => $order->get_shipping_company(),
-            "address_1"  => $order->get_shipping_address_1(),
-            "address_2"  => $order->get_shipping_address_2(),
-            "city"       => $order->get_shipping_city(),
-            "state"      => $order->get_shipping_state(),
-            "postcode"   => $order->get_shipping_postcode(),
-            "country"    => $order->get_shipping_country(),
-        ];
-
-        foreach ( $order->get_items() as $item )
-        {
-            $product = $item->get_product();
-
-            if ( !$product || !$product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ], true ) )
-                continue;
-
-            $sku     = $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku" ] );
-
-            $products[ $sku ] = [
-                "sku"      => $product->get_sku(),
-                "quantity" => $item->get_quantity(),
-                "sale"     => $product->get_meta( \Muifabrica_Integration::METAS[ "regular_price" ]    ),
-                // "regular"  => $product->get_meta( \Muifabrica_Integration::METAS[ "regular_ot_price" ] ),
-            ];
-        }
-
-        if ( empty( $products ) ) return;
-
         $order->update_meta_data( \Muifabrica_Integration::METAS[ "has_order" ], true );
 
         if ( $order->get_meta( \Muifabrica_Integration::METAS[ "order_sent" ], true ) ) return;
 
-        $api         = new Muifabrica_Api();
+        $data     = MFI_Helper::translate_order( $order );
 
-        // TODO enviar pedido para MF
+        $api      = new Muifabrica_Api();
+
+        $response = $api->post_order( $data );
+
+        if ( !$response )
+        {
+            $order->add_order_note( implode( "\n", [
+                "Falha ao enviar pedido para a Muifabrica!",
+                "Erro: " . $api->get_error_message()
+            ] ) );
+
+            $order->save();
+
+            return;
+        }
+
+        $mfi_order_id      = $response[ 0 ][ "oid"      ];
+        $mfi_order_number  = $response[ 0 ][ "order_id" ];
+        $mfi_sub_order_ids = [];
+
+        foreach ( $response[ "sorder_no" ] as $sub_order )
+            $mfi_sub_order_ids[] = $sub_order;
+
+        $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_sent"    ], true               );
+        $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_id"      ], $mfi_order_id      );
+        $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_number"  ], $mfi_order_number  );
+        $order->add_meta_data( \Muifabrica_Integration::METAS[ "sub_order_ids" ], $mfi_sub_order_ids );
 
         $order->add_order_note( implode( "\n", [
             "Pedido enviado com sucesso!",
-            "ID do pedido: #{$response_order_id}",
+            "ID do pedido: #{$mfi_order_id}",
+            "Número do pedido: #{$mfi_order_number}",
+            "IDs dos sub-pedidos: " . implode( " | ", $mfi_sub_order_ids )
         ] ) );
 
         $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_sent" ], true );
