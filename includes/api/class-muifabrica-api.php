@@ -207,9 +207,16 @@ class Muifabrica_Api
 	 */
     private function api_request( string $endpoint, string $method = "GET", array $data = [], string $function_name = "" ) : array|false
     {
-		// Get the base URL based on the environment.
-        $base_url                = $this->get_base_url();
-        $url                     = "{$base_url}/{$endpoint}";
+		if ( $function_name == "get_dollar_price" )
+		{
+			$url  = $endpoint;
+		}
+		else
+		{
+			// Get the base URL based on the environment.
+			$base = $this->get_base_url();
+			$url  = "{$base}/{$endpoint}";
+		}
 
 		// Get the base URL based on the environment.
 		list( $app_id, $app_sc ) = $this->get_app_credentials();
@@ -322,8 +329,8 @@ class Muifabrica_Api
             return false;
         }
 
-        $status        = wp_remote_retrieve_response_code( $response );
-        $response_body = json_decode( $response[ "body" ], true );
+		$status        = wp_remote_retrieve_response_code( $response );
+		$response_body = json_decode( $response[ "body" ], true );
 
         if ( $status < 200 || $status >= 300 || ( isset( $response_body[ "status" ] ) && $response_body[ "status" ] != 200 ) )
         {
