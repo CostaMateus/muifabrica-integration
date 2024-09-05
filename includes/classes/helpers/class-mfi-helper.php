@@ -159,9 +159,14 @@ class MFI_Helper
         $products      = [];
         $costumer_name = "{$order->get_billing_first_name()} {$order->get_billing_last_name()}";
 
-        $address       = "{$order->get_shipping_address_1()}, {$order->get_shipping_number()}, {$order->get_shipping_address_2()}";
+        $address_1     = $order->get_shipping_address_1();
+        $address_2     = $order->get_shipping_address_2();
+        $number        = $order->get_meta( "_shipping_number" );
+        $address       = "{$address_1}, {$number}, {$address_2}";
 
-        $pay_token     = "#{$item->get_id()}_#{$item->get_customer_id()}_#{$item->get_payment_method()}";
+        $neighborhood  = $order->get_meta( "_shipping_neighborhood" );
+
+        $pay_token     = "#{$order->get_id()}_#{$order->get_customer_id()}_#{$order->get_payment_method()}";
 
         $icms          = 0;
         $tariff        = 0;
@@ -203,17 +208,17 @@ class MFI_Helper
             "post_code"    => $order->get_shipping_postcode(),
             "detail"       => $address,
             "city"         => $order->get_shipping_city(),
-            "district"     => $order->get_shipping_neighborhood(),
+            "district"     => $neighborhood,
             "province"     => $order->get_shipping_state(),
             "state"        => $order->get_shipping_state(),
-            "house_number" => $order->get_shipping_number(),
+            "house_number" => $number,
 
             "paid"         => 0, // 0 - not paid | 1 - paid // TODO o que exatamente significa
-            "pay_time"     => strtotime( $item->get_date_created()->date( "Y-m-d H:i:s" ) ),
+            "pay_time"     => strtotime( $order->get_date_created()->date( "Y-m-d H:i:s" ) ),
             "pay_type"     => $order->get_payment_method(),
             "pay_token"    => $pay_token,
 
-            "uid"          => $item->get_customer_id(),
+            "uid"          => $order->get_customer_id(),
             "personcode"   => "personcode",// Tax ID        // TODO, não sei do que se trata -
             "tariff"       => $tariff,
             "icms"         => $icms,
@@ -759,11 +764,9 @@ class MFI_Helper
      */
     private static function get_freight_type( object $order )
     {
-        $shipping     = $order->get_items( "shipping" );
-
-        $key          = array_key_first( $shipping );
-
-        $shipping_id  = $shipping[ $key ]->get_shipping_id();
+        $shippings    = $order->get_shipping_methods();
+        $key          = array_key_first( $shippings );
+        $shipping_id  = $shippings[ $key ]->get_method_id();
 
         $freight_type = $shipping_id == "muifabrica-air-shipping" ? "1" : "2";
 
