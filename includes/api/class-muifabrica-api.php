@@ -110,9 +110,11 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Undocumented function
+	 * Retrieve the current error message.
 	 *
-	 * @return 	string
+	 * This function returns the current error message stored in the object.
+	 *
+	 * @return 	string  	The current error message.
 	 */
 	public function get_error_message() : string
 	{
@@ -120,9 +122,12 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Undocumented function
+	 * Concatenate a new error message to the existing error message.
 	 *
-	 * @param 	string 	$message
+	 * This function appends a new error message to the existing error message.
+	 * If there is no existing error message, it sets the new message as the error message.
+	 *
+	 * @param 	string 	$message 	The new error message to be added.
 	 * @return 	void
 	 */
 	private function concat_error_message( string $message ) : void
@@ -270,7 +275,7 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Generate token for use in Webhook API calls.
+	 * Generate token for use in API calls.
 	 *
 	 * @since 	1.0.0
 	 * @return 	bool 	True on success or false if generation fails.
@@ -387,7 +392,7 @@ class Muifabrica_Api
 	}
 
 	/**
-     * Get categories from API.
+     * Get the list of categories from API.
 	 *
 	 * @since 	1.0.0
 	 * @return 	array|false
@@ -466,7 +471,7 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Get the product details.
+	 * Get the product details from API.
 	 *
 	 * @since 	1.0.0
 	 * @param 	int 	$product_id
@@ -547,7 +552,7 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Get the list of products.
+	 * Get the list of products from API.
 	 *
 	 * @since 	1.0.0
 	 * @return 	array|false
@@ -665,7 +670,7 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Get the freight
+	 * Get the freight from API.
 	 *
 	 * @since 	1.0.0
 	 * @param 	array 	$data
@@ -759,11 +764,14 @@ class Muifabrica_Api
 	}
 
 	/**
-	 * Undocumented function
+	 * Post an order to the API.
+	 *
+	 * This function sends an order to the API and handles the response.
+	 * It logs errors and concatenates error messages if any issues occur during the process.
 	 *
 	 * @since 	1.0.0
-	 * @param 	array 	$data
-	 * @return 	array|false
+	 * @param 	array 	$data 	The order data to be sent.
+	 * @return 	array|false 	The response data from the API or false on failure.
 	 */
 	public function post_order( array $data ) : array|false
 	{
