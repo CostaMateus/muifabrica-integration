@@ -151,10 +151,11 @@ class MFI_Helper
      * for the order.
      *
      * @since   1.0.0
-     * @param   object  $order  The order object containing items and shipping details.
-     * @return  array           An associative array with translated order details.
+     * @param   object  $order          The order object containing items and shipping details.
+     * @param   bool    $to_confirm     To return earlier, only data necessary to confirm the order. Default false.
+     * @return  array                   An associative array with translated order details.
      */
-    public static function translate_order( object $order )
+    public static function translate_order( object $order, bool $to_confirm = false )
     {
         $products      = [];
         $costumer_name = "{$order->get_billing_first_name()} {$order->get_billing_last_name()}";
@@ -173,6 +174,8 @@ class MFI_Helper
 
         $freight       = self::get_freight( $order );
 
+        $freight_type  = ( int ) self::get_freight_type( $order );
+
         foreach ( $freight as $key => $value )
         {
             $icms   += $value[ "icms"  ];
@@ -181,8 +184,8 @@ class MFI_Helper
 
         foreach ( $order->get_items() as $item )
         {
-            $product  = $item->get_product();
-            $supplied = $product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ] );
+            $product       = $item->get_product();
+            $supplied      = $product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ] );
 
             if ( !$supplied ) continue;
 
@@ -190,7 +193,7 @@ class MFI_Helper
             $mfi_prd_id    = $product->get_meta( \Muifabrica_Integration::METAS[ "product_id"    ] );
             $mfi_prd_price = $product->get_meta( \Muifabrica_Integration::METAS[ "regular_price" ] );
 
-            $products[] = [
+            $products[]    = [
                 "product_attr_unique" => $mfi_prd_sku,
                 "product_id"          => $mfi_prd_id,
                 "product_price"       => $mfi_prd_price,
@@ -199,8 +202,16 @@ class MFI_Helper
             ];
         }
 
+        if ( $to_confirm )
+        {
+            return [
+                "freight_type" => $freight_type,
+                "products"     => $products,
+            ];
+        }
+
         return [
-            "freight_type" => ( int ) self::get_freight_type( $order ),
+            "freight_type" => $freight_type,
             "real_name"    => $costumer_name,
             "email"        => $order->get_billing_email(),
             "phone"        => $order->get_billing_phone(),
