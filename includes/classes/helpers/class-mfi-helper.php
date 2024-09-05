@@ -11,6 +11,8 @@
 
 namespace Muifabrica_Integration\Classes\Helpers;
 
+use Muifabrica_Integration\Api\Muifabrica_Api;
+
 class MFI_Helper
 {
     /**
@@ -34,6 +36,9 @@ class MFI_Helper
         $categories[] = self::find_or_create_category( $product[ "cate_name_pt" ] );
         $metadatas    = [
             [
+                "key"   => \Muifabrica_Integration::METAS[ "product_id"        ],
+                "value" => $product[ "id"       ],
+            ], [
                 "key"   => \Muifabrica_Integration::METAS[ "regular_price"     ],
                 "value" => $product[ "price"    ],
             ], [
@@ -134,6 +139,85 @@ class MFI_Helper
             "attributes"         => $attributes,
             "variations"         => $variations,
             "meta_data"          => $metadatas
+        ];
+    }
+
+    /**
+     * Translate an order into a specific format for further processing.
+     *
+     * This function translates the given order object into an associative array
+     * containing customer details, shipping information, payment details, and
+     * product information. It also calculates the freight costs, ICMS, and tariff
+     * for the order.
+     *
+     * @since   1.0.0
+     * @param   object  $order  The order object containing items and shipping details.
+     * @return  array           An associative array with translated order details.
+     */
+    public static function translate_order( object $order )
+    {
+        $products      = [];
+        $costumer_name = "{$order->get_billing_first_name()} {$order->get_billing_last_name()}";
+
+        $address       = "{$order->get_shipping_address_1()}, {$order->get_shipping_number()}, {$order->get_shipping_address_2()}";
+
+        $pay_token     = "#{$item->get_id()}_#{$item->get_customer_id()}_#{$item->get_payment_method()}";
+
+        $icms          = 0;
+        $tariff        = 0;
+
+        $freight       = self::get_freight( $order );
+
+        foreach ( $freight as $key => $value )
+        {
+            $icms   += $value[ "icms"  ];
+            $tariff += $value[ "total" ];
+        }
+
+        foreach ( $order->get_items() as $item )
+        {
+            $product  = $item->get_product();
+            $supplied = $product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ] );
+
+            if ( !$supplied ) continue;
+
+            $mfi_prd_sku   = $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku"  ] );
+            $mfi_prd_id    = $product->get_meta( \Muifabrica_Integration::METAS[ "product_id"    ] );
+            $mfi_prd_price = $product->get_meta( \Muifabrica_Integration::METAS[ "regular_price" ] );
+
+            $products[] = [
+                "product_attr_unique" => $mfi_prd_sku,
+                "product_id"          => $mfi_prd_id,
+                "product_price"       => $mfi_prd_price,
+                "cart_num"            => $item->get_quantity(),
+                "freight_price"       => $freight[ $mfi_prd_sku ][ "total" ],
+            ];
+        }
+
+        return [
+            "freight_type" => ( int ) self::get_freight_type( $order ),
+            "real_name"    => $costumer_name,
+            "email"        => $order->get_billing_email(),
+            "phone"        => $order->get_billing_phone(),
+
+            "post_code"    => $order->get_shipping_postcode(),
+            "detail"       => $address,
+            "city"         => $order->get_shipping_city(),
+            "district"     => $order->get_shipping_neighborhood(),
+            "province"     => $order->get_shipping_state(),
+            "state"        => $order->get_shipping_state(),
+            "house_number" => $order->get_shipping_number(),
+
+            "paid"         => 0, // 0 - not paid | 1 - paid // TODO o que exatamente significa
+            "pay_time"     => strtotime( $item->get_date_created()->date( "Y-m-d H:i:s" ) ),
+            "pay_type"     => $order->get_payment_method(),
+            "pay_token"    => $pay_token,
+
+            "uid"          => $item->get_customer_id(),
+            "personcode"   => "personcode",// Tax ID        // TODO, não sei do que se trata -
+            "tariff"       => $tariff,
+            "icms"         => $icms,
+            "products"     => $products,
         ];
     }
 
@@ -411,7 +495,8 @@ class MFI_Helper
                     $variation->update_meta_data( \Muifabrica_Integration::METAS[ "supplier_sku" ], $t_variation[ "sku" ] );
                 }
 
-                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "supplied" ], "yes" );
+                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "supplied"   ], "yes"            );
+                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "product_id" ], $product[ "id" ] );
 
                 $variation->set_regular_price( ( string ) $t_variation[ "regular_price" ] );
                 $variation->set_sale_price( ( string ) $t_variation[ "sale_price" ] );
@@ -660,5 +745,90 @@ class MFI_Helper
         }
 
         return $text;
+    }
+
+    /**
+     * Determine the freight type based on the shipping method of an order.
+     *
+     * This function retrieves the shipping method from the order and determines
+     * the freight type. It returns "1" for air shipping and "2" for other types.
+     *
+     * @since   1.0.0
+     * @param   object  $order  The order object containing items and shipping details.
+     * @return  string          The freight type ("1" for air shipping, "2" for others).
+     */
+    private static function get_freight_type( object $order )
+    {
+        $shipping     = $order->get_items( "shipping" );
+
+        $key          = array_key_first( $shipping );
+
+        $shipping_id  = $shipping[ $key ]->get_shipping_id();
+
+        $freight_type = $shipping_id == "muifabrica-air-shipping" ? "1" : "2";
+
+        return $freight_type;
+    }
+
+    /**
+     * Calculate freight costs for an order.
+     *
+     * This function calculates the freight costs for each product in an order
+     * by interacting with the Muifabrica API.
+     *
+     * @since   1.0.0
+     * @param   object  $order  The order object containing items and shipping details.
+     * @return  array           An associative array with product SKUs as keys and their freight costs as values.
+     */
+    private static function get_freight( object $order )
+    {
+        $api          = new Muifabrica_Api();
+
+        $freight_type = self::get_freight_type( $order );
+
+        $freight      = [];
+
+        foreach ( $order->get_items() as $item )
+        {
+            $product  = $item->get_product();
+
+            if ( !$product ) continue;
+
+            $supplied = $product->get_meta( \Muifabrica_Integration::METAS[ "supplied"     ] );
+
+            if ( !$supplied ) continue;
+
+            // Prepare the request payload for the API call.
+            $response = $api->get_freight( [
+                "freight_type" => ( int ) $freight_type,
+                "products"     => [ [
+                    "unique"           => $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku" ], true ),
+                    "quantity"         => $item->get_quantity(),
+                    "transport_method" => $freight_type,
+                ] ],
+            ] );
+
+            $sku      = $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku" ] );
+            $cost     = 0;
+
+            if ( !$response )
+                $freight[ $sku ] = [
+                    "total"  => 0,
+                    "icms"   => 0,
+                    "tariff" => 0,
+                ];
+
+            // Sum up the costs from the API response.
+            foreach ( $response as $value )
+                $cost += ( float ) $value;
+
+            $freight[ $sku ] = [
+                "total"  => $cost,
+                "icms"   => $response[ "icmValue" ],
+                "tariff" => $response[ "tariff"   ],
+            ];
+        }
+
+        return $freight;
     }
 }
