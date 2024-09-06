@@ -86,6 +86,9 @@ class Muifabrica_Integration
 		"supplier_sku"        => "_mfi_supplier_sku",
 		"status_regular"      => "_mfi_status_regular",
 		"status_regular_ot"   => "_mfi_status_regular_ot",
+
+		"parent"              => "MFIP-",
+		"child"               => "MFI-",
 	];
 
 	/**
@@ -126,6 +129,29 @@ class Muifabrica_Integration
         $this->add_filters();
 		$this->add_classes();
     }
+
+	/**
+	 * Register the scheduled hook for pagare payments
+	 *
+	 * @since 	1.0.0
+	 * @return 	void
+	 */
+	public static function activate()
+	{
+		if ( !wp_next_scheduled( "mfi_update_stock_price" ) )
+			wp_schedule_event( time(), "twicedaily", "mfi_update_stock_price" );
+	}
+
+	/**
+	 * Clear the scheduled hook for pagare payments
+	 *
+	 * @since 	1.0.0
+	 * @return 	void
+	 */
+	public static function deactivate()
+	{
+		wp_clear_scheduled_hook( "mfi_update_stock_price" );
+	}
 
 	/**
 	 * Log
@@ -233,6 +259,8 @@ class Muifabrica_Integration
         add_action( "admin_enqueue_scripts",        [ $this, "add_admin_style_script"    ]     );
 
 		add_action( "admin_post_mfi_save_settings", [ $this, "save_settings_tab"         ]     );
+
+		add_action( "mfi_update_stock_price",       [ $this, "update_stock_price"        ], 10 );
     }
 
 	/**
@@ -319,7 +347,7 @@ class Muifabrica_Integration
 	 * @param  	array $methods Default shipping methods.
 	 * @return 	array
 	 */
-	public static function add_shippings_method( $methods )
+	public static function add_shippings_method( array $methods ) : array
 	{
         $methods[ "muifabrica-air-shipping" ] = "Muifabrica_Integration\Classes\Shipping\MFI_Air_Shipping";
         $methods[ "muifabrica-sea-shipping" ] = "Muifabrica_Integration\Classes\Shipping\MFI_Sea_Shipping";
@@ -336,7 +364,7 @@ class Muifabrica_Integration
 	 * @param 	array 	$plugin_data
 	 * @return 	array
 	 */
-	public function plugin_row_meta( $plugin_meta, $plugin_file, $plugin_data ) : array
+	public function plugin_row_meta( array $plugin_meta, string $plugin_file, array $plugin_data ) : array
 	{
 		$path = path_join( WP_PLUGIN_DIR, $plugin_file );
 
@@ -396,7 +424,7 @@ class Muifabrica_Integration
 	 * @param 	array 	$links
 	 * @return 	array
 	 */
-	public static function plugin_action_links( $links ) : array
+	public static function plugin_action_links( array $links ) : array
     {
         $url            = esc_url( admin_url( "admin.php?page=muifabrica_integration" ) );
         $text           = __( "Configurações", "muifabrica_integration" );
@@ -478,7 +506,7 @@ class Muifabrica_Integration
 	 * @param 	array 	$data
 	 * @return 	void
 	 */
-	public function admin_settings_messages( $type, $data ) : void
+	public function admin_settings_messages( string $type, array $data ) : void
 	{
 		if ( isset( $data[ "erros" ] ) && $data[ "erros" ] )
 		{
@@ -574,6 +602,49 @@ class Muifabrica_Integration
 	}
 
 	/**
+	 * Undocumented function
+	 *
+	 * @since   1.0.0
+	 * @return 	void
+	 */
+	public function update_stock_price() : void
+	{
+		$api      = new Muifabrica_Integration\Api\Muifabrica_Api();
+
+		$products = wc_get_products( [
+            "limit"        => -1,
+            "meta_key"     => self::METAS[ "supplied" ],
+            "meta_compare" => "EXISTS",
+        ] );
+
+		foreach ( $products as $wc_product )
+		{
+			$mfi_product_id   = $wc_product->get_meta( self::METAS[ "product_id" ] );
+
+			$mfi_product      = $api->get_product_detail( $mfi_product_id );
+			$mfi_product      = json_decode( json_encode( $mfi_product ), true );
+			$mfi_variations   = $mfi_product[ "attrs" ];
+
+			$wc_variations_id = $wc_product->get_children();
+
+			foreach ( $wc_variations_id as $variation_id )
+			{
+				$wc_variation = wc_get_product( $variation_id );
+
+				foreach ( $mfi_variations as $mfi_variation )
+				{
+					$prefix = self::METAS[ "child" ];
+
+					if ( $wc_variation->get_sku() == "{$prefix}{$mfi_variation[ "unique" ]}" )
+						\Muifabrica_Integration\Classes\Helpers\MFI_Helper::update_stock_price( $wc_variation, $mfi_variation );
+				}
+			}
+
+			\Muifabrica_Integration\Classes\Helpers\MFI_Helper::update_stock_price( $wc_product, $mfi_product );
+		}
+	}
+
+	/**
 	 * Allow unsafe URLs.
 	 *
 	 * Modifies the request arguments to allow unsafe URLs.
@@ -583,10 +654,28 @@ class Muifabrica_Integration
 	 * @param   string  $url    The URL being requested
 	 * @return  array
 	 */
-	public function accept_unsafe_urls( $args, $url ) : array
+	public function accept_unsafe_urls( array $args, string $url ) : array
 	{
 		$args[ "reject_unsafe_urls" ] = false;
 
 		return $args;
 	}
 }
+
+/**
+ * Register activation hook.
+ * Register activation hook by invoking activate in Muifabrica_Integration class.
+ *
+ * @param 	string 		$file 		Path to the plugin file.
+ * @param 	callback 	$function 	The function to be run when the plugin is activated.
+ */
+register_activation_hook( \Muifabrica_Integration::FILE, [ "Muifabrica_Integration", "activate" ] );
+
+/**
+ * Register deactivation hook.
+ * Register deactivation hook by invoking deactivate in Muifabrica_Integration class.
+ *
+ * @param 	string 		$file 		Path to the plugin file.
+ * @param 	callback 	$function 	The function to be run when the plugin is deactivated.
+ */
+register_deactivation_hook( \Muifabrica_Integration::FILE, [ "Muifabrica_Integration", "deactivate" ] );
