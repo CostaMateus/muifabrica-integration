@@ -44,13 +44,15 @@ class MFI_Helper
             ], [
                 "key"   => \Muifabrica_Integration::METAS[ "status_regular"    ],
                 "value" => "even",
-            ], [
-                "key"   => \Muifabrica_Integration::METAS[ "regular_ot_price"  ],
-                "value" => $product[ "ot_price" ],
-            ], [
-                "key"   => \Muifabrica_Integration::METAS[ "status_regular_ot" ],
-                "value" => "even",
-            ], [
+            ],
+            // [
+            //     "key"   => \Muifabrica_Integration::METAS[ "regular_ot_price"  ],
+            //     "value" => $product[ "ot_price" ],
+            // ], [
+            //     "key"   => \Muifabrica_Integration::METAS[ "status_regular_ot" ],
+            //     "value" => "even",
+            // ],
+            [
                 "key"   => \Muifabrica_Integration::METAS[ "supplied"          ],
                 "value" => "yes",
             ],
@@ -273,134 +275,134 @@ class MFI_Helper
         return [];
     }
 
-    /**
-     * TODO rever uso da func
-     *
-     * Process regular price synchronization for a product.
-     *
-     * This function compares the current regular price with the new price and updates the product metadata accordingly.
-     *
-     * @since   1.0.0
-     * @param   string|float    $regular    The current regular price.
-     * @param   string|float    $new_price  The new regular price.
-     * @param   string          $status     The current status of the regular price.
-     * @param   object          $product    The WooCommerce product object.
-     * @return  bool                        True if the regular price was changed, false otherwise.
-     */
-    public static function process_regular_price( string|float $regular, string|float $new_price, string $status, object &$product ) : bool
-    {
-        $change = false;
+    // /**
+    //  * TODO rever uso da func
+    //  *
+    //  * Process regular price synchronization for a product.
+    //  *
+    //  * This function compares the current regular price with the new price and updates the product metadata accordingly.
+    //  *
+    //  * @since   1.0.0
+    //  * @param   string|float    $regular    The current regular price.
+    //  * @param   string|float    $new_price  The new regular price.
+    //  * @param   string          $status     The current status of the regular price.
+    //  * @param   object          $product    The WooCommerce product object.
+    //  * @return  bool                        True if the regular price was changed, false otherwise.
+    //  */
+    // public static function process_regular_price( string|float $regular, string|float $new_price, string $status, object &$product ) : bool
+    // {
+    //     $change = false;
 
-        // Call the process_price function to handle the regular price update.
-        self::process_price( $change, $status, $product, $regular, $new_price, "_dsm_supplier_regular_price" );
+    //     // Call the process_price function to handle the regular price update.
+    //     self::process_price( $change, $status, $product, $regular, $new_price, "_dsm_supplier_regular_price" );
 
-        // If there was a change in the regular price or status.
-        if ( $change )
-        {
-            // Update the product metadata with the new status and timestamp.
-            $product->update_meta_data( "_dsm_supplier_status_regular", $status               );
-            $product->update_meta_data( "_dsm_supplier_price_upd",      date( "Y-m-d H:i:s" ) );
-        }
+    //     // If there was a change in the regular price or status.
+    //     if ( $change )
+    //     {
+    //         // Update the product metadata with the new status and timestamp.
+    //         $product->update_meta_data( "_dsm_supplier_status_regular", $status               );
+    //         $product->update_meta_data( "_dsm_supplier_price_upd",      date( "Y-m-d H:i:s" ) );
+    //     }
 
-        return $change;
-    }
+    //     return $change;
+    // }
 
-    /**
-     * TODO rever uso da func
-     *
-     * Process sale price synchronization for a product.
-     *
-     * This function compares the current sale price with the new price and updates the product metadata accordingly.
-     *
-     * @since   1.0.0
-     * @param   string|float    $regular    The current regular price.
-     * @param   string|float    $sale       The current sale price.
-     * @param   string          $new_price  The new sale price.
-     * @param   string          $status     The current status of the sale price.
-     * @param   object          $product    The WooCommerce product object.
-     * @return  bool                        True if the sale price was changed, false otherwise.
-     */
-    public static function process_sale_price( string|float $regular, string|float $sale, string $new_price, string $status, object &$product ) : bool
-    {
-        $change = false;
+    // /**
+    //  * TODO rever uso da func
+    //  *
+    //  * Process sale price synchronization for a product.
+    //  *
+    //  * This function compares the current sale price with the new price and updates the product metadata accordingly.
+    //  *
+    //  * @since   1.0.0
+    //  * @param   string|float    $regular    The current regular price.
+    //  * @param   string|float    $sale       The current sale price.
+    //  * @param   string          $new_price  The new sale price.
+    //  * @param   string          $status     The current status of the sale price.
+    //  * @param   object          $product    The WooCommerce product object.
+    //  * @return  bool                        True if the sale price was changed, false otherwise.
+    //  */
+    // public static function process_sale_price( string|float $regular, string|float $sale, string $new_price, string $status, object &$product ) : bool
+    // {
+    //     $change = false;
 
-        // If both the current sale price and the new price are present.
-        if ( $sale && $new_price )
-        {
-            // Call the process_price function to handle the sale price update.
-            self::process_price( $change, $status, $product, $sale, $new_price, "_dsm_supplier_sale_price" );
-        }
-        elseif ( $sale && !$new_price )
-        {
-            // If the current sale price is present but the new price is not.
-            $change = true;
-            $status = "even";
+    //     // If both the current sale price and the new price are present.
+    //     if ( $sale && $new_price )
+    //     {
+    //         // Call the process_price function to handle the sale price update.
+    //         self::process_price( $change, $status, $product, $sale, $new_price, "_dsm_supplier_sale_price" );
+    //     }
+    //     elseif ( $sale && !$new_price )
+    //     {
+    //         // If the current sale price is present but the new price is not.
+    //         $change = true;
+    //         $status = "even";
 
-            // Update the product metadata to remove the sale price.
-            $product->update_meta_data( "_dsm_supplier_sale_price", null );
-        }
-        elseif ( !$sale && $new_price )
-        {
-            // If the current sale price is not present but the new price is.
-            $change = true;
+    //         // Update the product metadata to remove the sale price.
+    //         $product->update_meta_data( "_dsm_supplier_sale_price", null );
+    //     }
+    //     elseif ( !$sale && $new_price )
+    //     {
+    //         // If the current sale price is not present but the new price is.
+    //         $change = true;
 
-            // Set the new status based on whether the new price is higher or lower than the regular price.
-            $status = ( $regular > $new_price ) ? "down" : "up";
+    //         // Set the new status based on whether the new price is higher or lower than the regular price.
+    //         $status = ( $regular > $new_price ) ? "down" : "up";
 
-            // Update the product metadata with the new sale price.
-            $product->update_meta_data( "_dsm_supplier_sale_price", $new_price );
-        }
+    //         // Update the product metadata with the new sale price.
+    //         $product->update_meta_data( "_dsm_supplier_sale_price", $new_price );
+    //     }
 
-        // If there was a change in the sale price or status.
-        if ( $change )
-        {
-            // Update the product metadata with the new status and timestamp.
-            $product->update_meta_data( "_dsm_supplier_status_sale", $status               );
-            $product->update_meta_data( "_dsm_supplier_price_upd",   date( "Y-m-d H:i:s" ) );
-        }
+    //     // If there was a change in the sale price or status.
+    //     if ( $change )
+    //     {
+    //         // Update the product metadata with the new status and timestamp.
+    //         $product->update_meta_data( "_dsm_supplier_status_sale", $status               );
+    //         $product->update_meta_data( "_dsm_supplier_price_upd",   date( "Y-m-d H:i:s" ) );
+    //     }
 
-        return $change;
-    }
+    //     return $change;
+    // }
 
-    /**
-     * TODO rever uso da func
-     *
-     * Helper function to process price updates.
-     *
-     * This function compares the current price with the new price and updates the product metadata accordingly.
-     *
-     * @since   1.0.0
-     * @param   bool            $has_change     A reference to a boolean indicating if a change occurred.
-     * @param   string          $status         A reference to a string to store the new status.
-     * @param   object          $product        The WooCommerce product object.
-     * @param   string|float    $current        The current price.
-     * @param   string|float    $new            The new price.
-     * @param   string          $meta_key       The meta key for the price.
-     * @return  void
-     */
-    public static function process_price( bool &$has_change, string &$status, object &$product, string|float $current, string|float $new, string $meta_key ) : void
-    {
-        // If the current price is different from the new price.
-        if ( $current != $new )
-        {
-            $has_change = true;
+    // /**
+    //  * TODO rever uso da func
+    //  *
+    //  * Helper function to process price updates.
+    //  *
+    //  * This function compares the current price with the new price and updates the product metadata accordingly.
+    //  *
+    //  * @since   1.0.0
+    //  * @param   bool            $has_change     A reference to a boolean indicating if a change occurred.
+    //  * @param   string          $status         A reference to a string to store the new status.
+    //  * @param   object          $product        The WooCommerce product object.
+    //  * @param   string|float    $current        The current price.
+    //  * @param   string|float    $new            The new price.
+    //  * @param   string          $meta_key       The meta key for the price.
+    //  * @return  void
+    //  */
+    // public static function process_price( bool &$has_change, string &$status, object &$product, string|float $current, string|float $new, string $meta_key ) : void
+    // {
+    //     // If the current price is different from the new price.
+    //     if ( $current != $new )
+    //     {
+    //         $has_change = true;
 
-            // Set the new status based on whether the new price is higher or lower.
-            $status     = ( $current > $new ) ? "down" : "up";
+    //         // Set the new status based on whether the new price is higher or lower.
+    //         $status     = ( $current > $new ) ? "down" : "up";
 
-            // Update the product metadata with the new price.
-            $product->update_meta_data( $meta_key, $new );
-        }
-        else
-        {
-            // If the current price is the same as the new price.
-            if ( $status != "even" )
-            {
-                $has_change = true;
-                $status     = "even";
-            }
-        }
-    }
+    //         // Update the product metadata with the new price.
+    //         $product->update_meta_data( $meta_key, $new );
+    //     }
+    //     else
+    //     {
+    //         // If the current price is the same as the new price.
+    //         if ( $status != "even" )
+    //         {
+    //             $has_change = true;
+    //             $status     = "even";
+    //         }
+    //     }
+    // }
 
     /**
      * Process product metadata.
@@ -511,11 +513,13 @@ class MFI_Helper
                     $variation->update_meta_data( \Muifabrica_Integration::METAS[ "supplier_sku" ], $t_variation[ "sku" ] );
                 }
 
-                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "supplied"   ], "yes"            );
-                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "product_id" ], $product[ "id" ] );
+                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "supplied"       ], "yes"                           );
+                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "product_id"     ], $product[ "id" ]                );
+                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "regular_price"  ], $t_variation[ "regular_price" ] );
+                $variation->update_meta_data( \Muifabrica_Integration::METAS[ "status_regular" ], "even"                          );
 
                 $variation->set_regular_price( ( string ) $t_variation[ "regular_price" ] );
-                $variation->set_sale_price( ( string ) $t_variation[ "sale_price" ] );
+                // $variation->set_sale_price( ( string ) $t_variation[ "sale_price" ] );
 
                 $variation->set_manage_stock( $t_variation[ "manage_stock" ] );
                 $variation->set_stock_quantity( $t_variation[ "stock_quantity" ] );
@@ -844,5 +848,39 @@ class MFI_Helper
         }
 
         return $freight;
+    }
+
+    /**
+     * Updates the stock and price of a WooCommerce product based on MFI product data.
+     *
+     * This function updates the stock quantity and price of a WooCommerce product
+     * using the data provided by the MFI (Muifabrica Integration) product. It also
+     * updates meta data to track the price update status and the time of the update.
+     *
+     * @param   object  $wc_product     The WooCommerce product object to be updated.
+     * @param   array   $mfi_product    The MFI product data containing the new price and stock.
+     * @return  void
+     */
+    public static function update_stock_price( object $wc_product, array $mfi_product ) : void
+    {
+        $mfi_price = ( float ) $mfi_product[ "price" ];
+        $wc_price  = ( float ) $wc_product->get_regular_price();
+
+        if ( $mfi_price > $wc_price )
+            $status_price = "up";
+
+        else if ( $mfi_price < $wc_price )
+            $status_price = "down";
+
+        else
+            $status_price = "even";
+
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "price_upd"      ], date( "Y-m-d H:i:s" )   );
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "status_regular" ], $status_price           );
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "regular_price"  ], $mfi_product[ "price" ] );
+
+        $wc_product->set_stock_quantity( $mfi_product[ "stock" ] );
+
+        $wc_product->save();
     }
 }
