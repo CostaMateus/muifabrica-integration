@@ -20,7 +20,7 @@ class MFI_Preview_Table extends \WP_List_Table
      * @since   1.0.0
      * @var     string
      */
-    protected $_prefix_parent = "MFIP-";
+    protected $_prefix_parent = \Muifabrica_Integration::METAS[ "parent" ];
 
     /**
      * Prefix sku child.
@@ -28,7 +28,7 @@ class MFI_Preview_Table extends \WP_List_Table
      * @since   1.0.0
      * @var     string
      */
-    protected $_prefix_child  = "MFI-";
+    protected $_prefix_child  = \Muifabrica_Integration::METAS[ "child" ];
 
     /**
      * Products data.
