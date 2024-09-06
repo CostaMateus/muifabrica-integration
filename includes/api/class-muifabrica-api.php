@@ -225,7 +225,7 @@ class Muifabrica_Api
 		if ( empty( $app_id ) || empty( $app_sc ) )
 		{
 			$message = "App_id e/ou App_secret ausentes";
-			$args    = [ "app_id" => $app_id, "app_secret" => $app_sc ];
+			$args    = [ "app_id" => $app_id, "app_key/app_secret" => $app_sc ];
 
 			// Log the error and concatenate the error message.
 			$this->log_and_concat_error( "error", 0, $function_name, 500, $message, $url, $args, [], true );
@@ -237,8 +237,8 @@ class Muifabrica_Api
 		if ( $function_name == "generate_token" )
 		{
 			$data = [
-				"app_id"     => $app_id,
-				"app_secret" => $app_sc,
+				"app_id"  => $app_id,
+				"app_key" => $app_sc,
 			];
 
 			$url  = add_query_arg( $data, $url );
