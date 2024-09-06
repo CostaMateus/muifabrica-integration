@@ -81,6 +81,20 @@ class MFI_Orders
 
         $api      = new Muifabrica_Api();
 
+        $response = $api->confirm_order( $data );
+
+        if ( !$response )
+        {
+            $order->add_order_note( implode( "\n", [
+                "Falha ao confirmar pedido com a Muifabrica!",
+                "Erro: " . $api->get_error_message()
+            ] ) );
+
+            $order->save();
+
+            return;
+        }
+
         $response = $api->post_order( $data );
 
         if ( !$response )
@@ -234,29 +248,6 @@ class MFI_Orders
         $data      = MFI_Helper::translate_order( $order, true );
         $api       = new Muifabrica_Api();
 
-        $confirmed = $order->get_meta( \Muifabrica_Integration::METAS[ "order_confirmed" ] );
-
-        // Confirm order with MFI API
-        if ( !$confirmed && in_array( $old_status, [ "pending", "on-hold" ] ) && $new_status == "processing" )
-        {
-            $response = $api->confirm_order( $data );
-
-            if ( !$response )
-            {
-                $order->add_order_note( implode( "\n", [
-                    "Falha ao confirmar pedido para a Muifabrica!",
-                    "Erro: " . $api->get_error_message()
-                ] ) );
-            }
-            else
-            {
-                $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_confirmed" ], true );
-                $order->add_order_note( "Pedido confirmado com sucesso!" );
-            }
-
-            $order->save();
-        }
-
         $cancelled = $order->get_meta( \Muifabrica_Integration::METAS[ "order_cancelled" ] );
 
         // Cancel order with MFI API
@@ -268,17 +259,20 @@ class MFI_Orders
             if ( !$response )
             {
                 $order->add_order_note( implode( "\n", [
-                    "Falha ao cancelar pedido na Muifabrica!",
+                    "Falha ao cancelar pedido com a Muifabrica!",
                     "Erro: " . $api->get_error_message()
                 ] ) );
-            }
-            else
-            {
-                $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_cancelled" ], true );
-                $order->add_order_note( "Pedido cancelado com sucesso!" );
+
+                $order->save();
+
+                return;
             }
 
+            $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_cancelled" ], true );
+            $order->add_order_note( "Pedido cancelado com sucesso!" );
             $order->save();
+
+            return;
         }
     }
 }
