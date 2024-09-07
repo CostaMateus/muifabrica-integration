@@ -445,6 +445,7 @@ class Muifabrica_Api
 	 */
 	public function get_products() : array|false
 	{
+		$limit      = 50;
 		$aux_prdts  = [];
 		$products   = [];
 		$categories = $this->get_categories();
@@ -464,10 +465,6 @@ class Muifabrica_Api
 
 				if ( !$response )
 					return false;
-
-				if ( $response[ "data" ][ "count" ] >= 1 )
-				{
-				}
 
 				$count     = $response[ "data" ][ "count" ] ?? 0;
 				$list      = $response[ "data" ][ "list"  ] ?? [];
