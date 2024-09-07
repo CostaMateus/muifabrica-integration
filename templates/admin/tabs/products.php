@@ -26,6 +26,7 @@ $pd_table = new MFI_Products_Table();
 				printf( "<input type='hidden' name='paged' value='%d' />", $paged );
 
 				$pd_table->prepare_items();
+				$pd_table->search_box( "Busca", "search_id" );
 				$pd_table->display();
 			?>
 		</form>

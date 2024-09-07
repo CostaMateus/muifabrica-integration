@@ -28,6 +28,7 @@ $pv_table = new MFI_Preview_Table();
 				printf( "<input type='hidden' name='paged' value='%d' />", $paged );
 
 				$pv_table->prepare_items();
+				$pv_table->search_box( "Busca", "search_id" );
 				$pv_table->display();
 			?>
 		</form>
