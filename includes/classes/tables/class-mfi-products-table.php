@@ -53,6 +53,33 @@ class MFI_Products_Table extends \WP_List_Table
     }
 
     /**
+     * Searches for products by name or SKU.
+     *
+     * @param   string  $search  The search term.
+     * @return  array            The array of matching products.
+     */
+    private function search_products( string $search = "" ) : array
+    {
+        if ( empty( $search ) )
+            return $this->products;
+
+        $search   = wp_unslash( trim( $search ) );
+
+        $products = [];
+
+        foreach ( $this->products as $index => $product )
+        {
+            if ( stripos( $product->get_name(), $search ) !== false )
+                $products[ $index ] = $product;
+
+            elseif (  stripos( $product->get_sku(), $search ) !== false  )
+                $products[ $index ] = $product;
+        }
+
+        return $products;
+    }
+
+    /**
      * Define the columns that are going to be used in the table.
      *
      * This method defines the columns that will be displayed in the table.
@@ -212,24 +239,26 @@ class MFI_Products_Table extends \WP_List_Table
      */
     public function prepare_items() : void
     {
+        $products              = $this->search_products( $_POST[ "s" ] ?? "" );
+
         $hidden                = [];
         $columns               = $this->get_columns();
         $sortable              = $this->get_sortable_columns();
 
         $this->_column_headers = [ $columns, $hidden, $sortable ];
 
-        usort( $this->products, [ &$this, "usort_reorder" ] );
+        usort( $products, [ &$this, "usort_reorder" ] );
 
-        $per_page              = 50;
+        $per_page              = 25;
         $current_page          = $this->get_pagenum();
-        $total_items           = count( $this->products );
+        $total_items           = count( $products );
         $total_pages           = ceil( $total_items / $per_page );
 
         if ( $total_items >= 1 )
         {
-            $this->products = array_chunk( $this->products, $per_page )[ $current_page - 1 ];
+            $products = array_chunk( $products, $per_page )[ $current_page - 1 ];
 
-            if ( empty( $paged ) || !is_numeric( $paged ) || $paged<=0 )
+            if ( empty( $paged ) || !is_numeric( $paged ) || $paged <= 0 )
                 $paged = 1;
 
             $this->set_pagination_args( [
@@ -238,7 +267,7 @@ class MFI_Products_Table extends \WP_List_Table
                 "per_page"    => $per_page,
             ] );
 
-            $this->items    = $this->products;
+            $this->items    = $products;
         }
         else
         {
