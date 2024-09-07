@@ -84,7 +84,8 @@
                 return;
             }
 
-            $( "#mfi-modal-load" ).removeClass( "mfi-d-none" );
+            mfiShowLoad();
+
             $( "#mfi-preview_products-list-table-form" ).submit();
 
             return;
@@ -101,10 +102,16 @@
         const action = $( "#bulk-action-selector-top"    ).val();
         mfiPreventSubmitBulkActions( e, action );
     } );
+
 	$( document ).on( "click", "#doaction2", function( e )
     {
         const action = $( "#bulk-action-selector-bottom" ).val();
         mfiPreventSubmitBulkActions( e, action );
+    } );
+
+	$( document ).on( "click", "#search-submit", function( e )
+    {
+        mfiShowLoad();
     } );
 
 }( jQuery ) );
