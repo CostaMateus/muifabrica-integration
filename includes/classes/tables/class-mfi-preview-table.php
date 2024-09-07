@@ -65,6 +65,28 @@ class MFI_Preview_Table extends \WP_List_Table
     }
 
     /**
+     * Searches for products by name.
+     *
+     * @param   string  $search  The search term.
+     * @return  array            The array of matching products.
+     */
+    private function search_products( string $search = "" ) : array
+    {
+        if ( empty( $search ) )
+            return $this->products;
+
+        $search   = wp_unslash( trim( $search ) );
+
+        $products = [];
+
+        foreach ( $this->products as $index => $product )
+            if ( stripos( $product->store_name_pt, $search ) !== false )
+                $products[ $index ] = $product;
+
+        return $products;
+    }
+
+    /**
      * Define the columns that are going to be used in the table.
      *
      * Returns an array of columns to display in the table.
@@ -199,22 +221,24 @@ class MFI_Preview_Table extends \WP_List_Table
     {
         $this->process_bulk_action();
 
+        $products              = $this->search_products( $_POST[ "s" ] ?? "" );
+
         $hidden                = [];
         $columns               = $this->get_columns();
         $sortable              = $this->get_sortable_columns();
 
         $this->_column_headers = [ $columns, $hidden, $sortable ];
 
-        usort( $this->products, [ &$this, "usort_reorder" ] );
+        usort( $products, [ &$this, "usort_reorder" ] );
 
         $per_page              = 50;
         $current_page          = $this->get_pagenum();
-        $total_items           = count( $this->products );
+        $total_items           = count( $products );
         $total_pages           = ceil( $total_items / $per_page );
 
         if ( $total_items >= 1 )
         {
-            $this->products = array_chunk( $this->products, $per_page )[ $current_page - 1 ];
+            $products    = array_chunk( $products, $per_page )[ $current_page - 1 ];
 
             if ( empty( $paged ) || !is_numeric( $paged ) || $paged<=0 )
                 $paged = 1;
@@ -225,11 +249,11 @@ class MFI_Preview_Table extends \WP_List_Table
                 "per_page"    => $per_page,
             ] );
 
-            $this->items    = $this->products;
+            $this->items = $products;
         }
         else
         {
-            $this->items    = [];
+            $this->items = [];
         }
     }
 
@@ -445,7 +469,7 @@ class MFI_Preview_Table extends \WP_List_Table
         {
             if ( "BRL" === get_option( "woocommerce_currency" ) )
             {
-                $dollar = $this->api->get_dollar_price();;
+                $dollar = $this->api->get_dollar_price();
 
                 echo "<div class='mfi-mb-9 mfi-float-left' >
                         <p class='mfi-my-5' >
