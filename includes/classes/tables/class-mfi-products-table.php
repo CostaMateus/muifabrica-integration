@@ -92,14 +92,14 @@ class MFI_Products_Table extends \WP_List_Table
         return [
             // "cb"         => "<input type='checkbox' name='users[]' />",
             "thumbnail"  => "<span class='wc-image tips'></span>",
-            "name"       => __( "Nome",                 "muifabrica_integration" ),
-            "sku"        => __( "SKU",                  "muifabrica_integration" ),
-            "stock"      => __( "Estoque",              "muifabrica_integration" ),
-            "price"      => __( "Preço",                "muifabrica_integration" ),
-            "m_price"    => __( "MF Preço",             "muifabrica_integration" ),
-            "m_ot_price" => __( "MF Preço Commodities", "muifabrica_integration" ),
-            "categories" => __( "Categorias",           "muifabrica_integration" ),
-            "date"       => __( "Última alteração",     "muifabrica_integration" ),
+            "name"       => __( "Nome",                "muifabrica_integration" ),
+            "sku"        => __( "SKU",                 "muifabrica_integration" ),
+            "stock"      => __( "Estoque",             "muifabrica_integration" ),
+            "price"      => __( "Preço",               "muifabrica_integration" ),
+            "m_price"    => __( "MF Preço",            "muifabrica_integration" ),
+            "m_ot_price" => __( "MF Preço de Mercado", "muifabrica_integration" ),
+            "categories" => __( "Categorias",          "muifabrica_integration" ),
+            "date"       => __( "Última alteração",    "muifabrica_integration" ),
         ];
     }
 
