@@ -242,7 +242,7 @@ class MFI_Orders
 	 */
 	public function process_order_box_action( object $order ) : void
 	{
-        $this->send_order_to_muifabrica( $order->get_id(), [], $order );
+        $this->check_muifabrica_order( $order->get_id(), [], $order );
 	}
 
     /**
