@@ -216,7 +216,7 @@ class MFI_Helper
             "freight_type" => $freight_type,
             "real_name"    => $costumer_name,
             "email"        => $order->get_billing_email(),
-            "phone"        => $order->get_billing_phone(),
+            "phone"        => preg_replace( "/\D/", "", $order->get_billing_phone() ),
 
             "post_code"    => $order->get_shipping_postcode(),
             "detail"       => $address,
