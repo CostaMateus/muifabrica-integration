@@ -99,12 +99,12 @@ class MFI_Preview_Table extends \WP_List_Table
         return [
             "cb"          => "<input type='checkbox' />",
             "thumbnail"   => "<span class='wc-image'></span>",
-            "name"        => __( "Nome",                 "muifabrica_integration" ),
-            "description" => __( "Descrição",            "muifabrica_integration" ),
-            "var_number"  => __( "Nº de variações",      "muifabrica_integration" ),
-            "price"       => __( "MF Preço",             "muifabrica_integration" ),
-            "ot_price"    => __( "MF Preço Commodities", "muifabrica_integration" ),
-            "stock"       => __( "Estoque",              "muifabrica_integration" ),
+            "name"        => __( "Nome",                "muifabrica_integration" ),
+            "description" => __( "Descrição",           "muifabrica_integration" ),
+            "var_number"  => __( "Nº de variações",     "muifabrica_integration" ),
+            "price"       => __( "MF Preço",            "muifabrica_integration" ),
+            "ot_price"    => __( "MF Preço de Mercado", "muifabrica_integration" ),
+            "stock"       => __( "Estoque",             "muifabrica_integration" ),
         ];
     }
 
