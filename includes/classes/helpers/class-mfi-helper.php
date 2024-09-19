@@ -45,13 +45,13 @@ class MFI_Helper
                 "key"   => \Muifabrica_Integration::METAS[ "status_regular"    ],
                 "value" => "even",
             ],
-            // [
-            //     "key"   => \Muifabrica_Integration::METAS[ "regular_ot_price"  ],
-            //     "value" => $product[ "ot_price" ],
-            // ], [
-            //     "key"   => \Muifabrica_Integration::METAS[ "status_regular_ot" ],
-            //     "value" => "even",
-            // ],
+            [
+                "key"   => \Muifabrica_Integration::METAS[ "regular_ot_price"  ],
+                "value" => $product[ "ot_price" ],
+            ], [
+                "key"   => \Muifabrica_Integration::METAS[ "status_regular_ot" ],
+                "value" => "even",
+            ],
             [
                 "key"   => \Muifabrica_Integration::METAS[ "supplied"          ],
                 "value" => "yes",
@@ -130,8 +130,8 @@ class MFI_Helper
             "description"        => $product[ "description_pt" ],
             "short_description"  => $short,
             "sku"                => $prefix . $product[ "attrs" ][ 0 ][ "unique" ],
-            "regular_price"      => $product[ "price"          ], // or ot_price
-            "sale_price"         => $product[ "price"          ], // or ot_price
+            "regular_price"      => $product[ "price"          ],
+            "sale_price"         => $product[ "price"          ],
             "virtual"            => $product[ "is_virtual"     ],
             "manage_stock"       => true,
             "stock_quantity"     => $product[ "stock"          ],
@@ -180,8 +180,8 @@ class MFI_Helper
 
         foreach ( $freight as $key => $value )
         {
-            $icms   += $value[ "icms"  ];
-            $tariff += $value[ "total" ];
+            $icms   += $value[ "icms"   ];
+            $tariff += $value[ "tariff" ];
         }
 
         foreach ( $order->get_items() as $item )
@@ -198,7 +198,7 @@ class MFI_Helper
             $products[]    = [
                 "product_attr_unique" => $mfi_prd_sku,
                 "product_id"          => $mfi_prd_id,
-                "product_price"       => $mfi_prd_price,
+                "product_price"       => ( float ) $mfi_prd_price,
                 "cart_num"            => $item->get_quantity(),
                 "freight_price"       => $freight[ $mfi_prd_sku ][ "total" ],
             ];
@@ -863,21 +863,24 @@ class MFI_Helper
      */
     public static function update_stock_price( object $wc_product, array $mfi_product ) : void
     {
-        $mfi_price = ( float ) $mfi_product[ "price" ];
-        $wc_price  = ( float ) $wc_product->get_regular_price();
+        $mfi_price       = ( float ) $mfi_product[ "price"    ];
+        $mfi_ot_price    = ( float ) $mfi_product[ "ot_price" ];
 
-        if ( $mfi_price > $wc_price )
-            $status_price = "up";
+        $wc_price        = ( float ) $wc_product->get_meta( \Muifabrica_Integration::METAS[ "regular_price"    ] );
+        $wc_ot_price     = ( float ) $wc_product->get_meta( \Muifabrica_Integration::METAS[ "regular_ot_price" ] );
 
-        else if ( $mfi_price < $wc_price )
-            $status_price = "down";
+        $status_price    = ( $mfi_price    > $wc_price    ) ? "up" : ( ( $mfi_price    < $wc_price    ) ? "down" : "even" );
+        $status_ot_price = ( $mfi_ot_price > $wc_ot_price ) ? "up" : ( ( $mfi_ot_price < $wc_ot_price ) ? "down" : "even" );
 
-        else
-            $status_price = "even";
+        $date            = date( "Y-m-d H:i:s" );
 
-        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "price_upd"      ], date( "Y-m-d H:i:s" )   );
-        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "status_regular" ], $status_price           );
-        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "regular_price"  ], $mfi_product[ "price" ] );
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "price_upd"         ], $date                      );
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "status_regular"    ], $status_price              );
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "regular_price"     ], $mfi_product[ "price"    ] );
+
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "ot_price_upd"      ], $date                      );
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "status_regular_ot" ], $status_ot_price           );
+        $wc_product->update_meta_data( \Muifabrica_Integration::METAS[ "regular_ot_price"  ], $mfi_product[ "ot_price" ] );
 
         $wc_product->set_stock_quantity( $mfi_product[ "stock" ] );
 
