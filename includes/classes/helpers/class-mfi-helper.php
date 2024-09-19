@@ -227,12 +227,12 @@ class MFI_Helper
             "house_number" => $number,
 
             "paid"         => 0, // 0 - not paid | 1 - paid // TODO o que exatamente significa
-            "pay_time"     => strtotime( $order->get_date_created()->date( "Y-m-d H:i:s" ) ),
+            "pay_time"     => $order->get_date_created()->getTimestamp(),
             "pay_type"     => $order->get_payment_method(),
             "pay_token"    => $pay_token,
 
             "uid"          => $order->get_customer_id(),
-            "personcode"   => "personcode",// Tax ID        // TODO, não sei do que se trata -
+            "personcode"   => $order->get_meta( "_billing_cpf" ),
             "tariff"       => $tariff,
             "icms"         => $icms,
             "products"     => $products,
