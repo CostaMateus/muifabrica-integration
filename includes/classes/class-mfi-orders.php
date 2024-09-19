@@ -22,7 +22,7 @@ class MFI_Orders
      */
     public function __construct()
     {
-        add_action( "woocommerce_checkout_order_processed",            [ $this, "send_order_to_muifabrica" ], 20, 3 );
+        add_action( "woocommerce_checkout_order_processed",            [ $this, "check_muifabrica_order"   ], 20, 3 );
         add_action( "woocommerce_order_status_changed",                [ $this, "order_status_change"      ], 9, 4  );
 
 		add_filter( "woocommerce_shop_order_list_table_columns",       [ $this, "add_column_title"         ], 10, 1 );
@@ -128,6 +128,23 @@ class MFI_Orders
             "IDs dos sub-pedidos: " . implode( " | ", $mfi_sub_order_ids )
         ] ) );
 
+        $order->save();
+    }
+
+    /**
+     * Check if order has Muifabrica products
+     *
+     * @since   1.0.0
+     * @param   int     $order_id
+     * @param   array   $posted_data
+     * @param   object  $order
+     * @return  void
+     */
+    public function check_muifabrica_order(   int $order_id, array $posted_data, object $order ) : void
+    {
+        if ( !$this->check_mfi_products( $order ) ) return;
+
+        $order->update_meta_data( \Muifabrica_Integration::METAS[ "has_order" ], true );
         $order->save();
     }
 
