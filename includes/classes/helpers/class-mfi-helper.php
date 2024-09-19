@@ -676,6 +676,7 @@ class MFI_Helper
         $freight_type = self::get_freight_type( $order );
 
         $freight      = [];
+        $products     = [];
 
         foreach ( $order->get_items() as $item )
         {
@@ -687,38 +688,23 @@ class MFI_Helper
 
             if ( !$supplied ) continue;
 
-            // Prepare the request payload for the API call.
-            $response = $api->get_freight( [
-                "freight_type" => ( int ) $freight_type,
-                "products"     => [ [
-                    "unique"           => $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku" ], true ),
-                    "quantity"         => $item->get_quantity(),
-                    "transport_method" => $freight_type,
-                ] ],
-            ] );
-
-            $sku      = $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku" ] );
-            $cost     = 0;
-
-            if ( !$response )
-                $freight[ $sku ] = [
-                    "total"  => 0,
-                    "icms"   => 0,
-                    "tariff" => 0,
-                ];
-
-            // Sum up the costs from the API response.
-            foreach ( $response as $value )
-                $cost += ( float ) $value;
-
-            $freight[ $sku ] = [
-                "total"  => $cost,
-                "icms"   => $response[ "icmValue" ],
-                "tariff" => $response[ "tariff"   ],
+            $products[] = [
+                "product_attr_unique" => $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku" ], true ),
+                "product_id"          => $product->get_meta( \Muifabrica_Integration::METAS[ "product_id"   ], true ),
+                "cart_num"            => $item->get_quantity(),
             ];
         }
 
-        return $freight;
+        $freight      = [
+            "freight_type" => ( int ) $freight_type,
+            "products"     => $products,
+        ];
+
+        $response     = $api->confirm_order( $freight );
+
+        if ( !$response ) return null;
+
+        return $response;
     }
 
     /**
