@@ -263,15 +263,23 @@ class MFI_Orders
     {
         if ( !$this->check_mfi_products( $order ) ) return;
 
-        $data      = MFI_Helper::translate_order( $order, true );
-        $api       = new Muifabrica_Api();
+        $has_order = $order->get_meta( \Muifabrica_Integration::METAS[ "has_order"       ] );
+
+        if ( !$has_order ) return;
 
         $cancelled = $order->get_meta( \Muifabrica_Integration::METAS[ "order_cancelled" ] );
+
+        if ( $cancelled ) return;
 
         // Cancel order with MFI API
         if ( !$cancelled && $old_status != "completed" && $new_status == "cancelled" )
         {
+            $data         = MFI_Helper::translate_order( $order, true );
+
+            $api          = new Muifabrica_Api();
+
             $mfi_order_id = $order->get_meta( \Muifabrica_Integration::METAS[ "order_id" ] );
+
             $response     = $api->cancel_order( $data, $mfi_order_id );
 
             if ( !$response )
@@ -290,6 +298,17 @@ class MFI_Orders
             $order->add_order_note( "Pedido cancelado com sucesso!" );
             $order->save();
 
+            return;
+        }
+
+        $sented    = $order->get_meta( \Muifabrica_Integration::METAS[ "order_sent" ] );
+
+        if ( $sented ) return;
+
+        // Sent order with MFI API
+        if ( !$sented && in_array( $old_status, [ "pending", "on-hold", "failed" ] ) && $new_status == "processing" )
+        {
+            $this->send_order( $order );
             return;
         }
     }
