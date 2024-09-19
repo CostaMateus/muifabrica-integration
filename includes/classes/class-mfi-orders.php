@@ -218,7 +218,8 @@ class MFI_Orders
             if ( !$product || !$product->get_meta( \Muifabrica_Integration::METAS[ "supplied" ], true ) )
                 continue;
 
-            if ( !$theorder->get_meta( \Muifabrica_Integration::METAS[ "order_sent" ], true ) )
+            if ( !$theorder->get_meta( \Muifabrica_Integration::METAS[ "order_sent"      ], true ) &&
+                 !$theorder->get_meta( \Muifabrica_Integration::METAS[ "order_cancelled" ], true ) )
                 $to_send = true;
         }
 
