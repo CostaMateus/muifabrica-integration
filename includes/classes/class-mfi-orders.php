@@ -61,39 +61,17 @@ class MFI_Orders
     }
 
     /**
-     * Send order to suppliers
+     * Send order to Muifabrica
      *
      * @since   1.0.0
-     * @param   int     $order_id
-     * @param   array   $posted_data
      * @param   object  $order
-     * @return  void
+     * @return  bool
      */
-    public function send_order_to_muifabrica( int $order_id, array $posted_data, object $order ) : void
+    private function send_order( object $order ) : bool
     {
-        if ( !$this->check_mfi_products( $order ) ) return;
-
-        $order->update_meta_data( \Muifabrica_Integration::METAS[ "has_order" ], true );
-
-        if ( $order->get_meta( \Muifabrica_Integration::METAS[ "order_sent" ], true ) ) return;
-
         $data     = MFI_Helper::translate_order( $order );
 
         $api      = new Muifabrica_Api();
-
-        $response = $api->confirm_order( $data );
-
-        if ( !$response )
-        {
-            $order->add_order_note( implode( "\n", [
-                "Falha ao confirmar pedido com a Muifabrica!",
-                "Erro: " . $api->get_error_message()
-            ] ) );
-
-            $order->save();
-
-            return;
-        }
 
         $response = $api->post_order( $data );
 
@@ -106,7 +84,7 @@ class MFI_Orders
 
             $order->save();
 
-            return;
+            return false;
         }
 
         $mfi_order_id      = $response[ 0 ][ "oid"      ];
@@ -129,6 +107,8 @@ class MFI_Orders
         ] ) );
 
         $order->save();
+
+        return true;
     }
 
     /**
