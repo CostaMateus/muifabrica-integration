@@ -153,11 +153,10 @@ class MFI_Helper
      * for the order.
      *
      * @since   1.0.0
-     * @param   object  $order          The order object containing items and shipping details.
-     * @param   bool    $to_confirm     To return earlier, only data necessary to confirm the order. Default false.
-     * @return  array                   An associative array with translated order details.
+     * @param   object  $order  The order object containing items and shipping details.
+     * @return  array           An associative array with translated order details.
      */
-    public static function translate_order( object $order, bool $to_confirm = false )
+    public static function translate_order( object $order )
     {
         $products      = [];
         $costumer_name = "{$order->get_billing_first_name()} {$order->get_billing_last_name()}";
@@ -171,18 +170,11 @@ class MFI_Helper
 
         $pay_token     = "#{$order->get_id()}_#{$order->get_customer_id()}_#{$order->get_payment_method()}";
 
-        $icms          = 0;
-        $tariff        = 0;
-
         $freight       = self::get_freight( $order );
-
         $freight_type  = ( int ) self::get_freight_type( $order );
 
-        foreach ( $freight as $key => $value )
-        {
-            $icms   += $value[ "icms"   ];
-            $tariff += $value[ "tariff" ];
-        }
+        $icms          = $freight[ "icmValue" ];
+        $tariff        = $freight[ "tariff"   ];
 
         foreach ( $order->get_items() as $item )
         {
@@ -193,22 +185,15 @@ class MFI_Helper
 
             $mfi_prd_sku   = $product->get_meta( \Muifabrica_Integration::METAS[ "supplier_sku"  ] );
             $mfi_prd_id    = $product->get_meta( \Muifabrica_Integration::METAS[ "product_id"    ] );
-            $mfi_prd_price = $product->get_meta( \Muifabrica_Integration::METAS[ "regular_price" ] );
+
+            $mfi_prd_index = array_search( $mfi_prd_sku, array_column( $freight[ "cartInfo" ], "product_attr_unique" ));
 
             $products[]    = [
                 "product_attr_unique" => $mfi_prd_sku,
                 "product_id"          => $mfi_prd_id,
-                "product_price"       => ( float ) $mfi_prd_price,
                 "cart_num"            => $item->get_quantity(),
-                "freight_price"       => $freight[ $mfi_prd_sku ][ "total" ],
-            ];
-        }
-
-        if ( $to_confirm )
-        {
-            return [
-                "freight_type" => $freight_type,
-                "products"     => $products,
+                "product_price"       => $freight[ "cardInfo" ][ $mfi_prd_index ][ "truePrice"     ],
+                "freight_price"       => $freight[ "cardInfo" ][ $mfi_prd_index ][ "freight_price" ],
             ];
         }
 
