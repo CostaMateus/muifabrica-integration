@@ -192,8 +192,8 @@ class MFI_Helper
                 "product_attr_unique" => $mfi_prd_sku,
                 "product_id"          => $mfi_prd_id,
                 "cart_num"            => $item->get_quantity(),
-                "product_price"       => $freight[ "cardInfo" ][ $mfi_prd_index ][ "truePrice"     ],
-                "freight_price"       => $freight[ "cardInfo" ][ $mfi_prd_index ][ "freight_price" ],
+                "product_price"       => $freight[ "cartInfo" ][ $mfi_prd_index ][ "truePrice"     ],
+                "freight_price"       => $freight[ "cartInfo" ][ $mfi_prd_index ][ "freight_price" ],
             ];
         }
 
