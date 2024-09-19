@@ -71,7 +71,6 @@ class Muifabrica_Integration
 		"email_settings"      => "_mfi_email_settings",
 		"env_api"             => "_mfi_env_api",
 		"has_order"           => "_mfi_has_order",
-		"order_confirmed"     => "_mfi_order_confirmed",
 		"order_cancelled"     => "_mfi_order_cancelled",
 		"order_sent"          => "_mfi_order_sent",
 		"order_id"            => "_mfi_order_id",
