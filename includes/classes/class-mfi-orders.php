@@ -91,8 +91,17 @@ class MFI_Orders
         $mfi_order_number  = $response[ 0 ][ "order_id" ];
         $mfi_sub_order_ids = [];
 
-        foreach ( $response[ "sorder_no" ] as $sub_order )
-            $mfi_sub_order_ids[] = $sub_order;
+        if ( is_array( $response[ "sorder_no" ] ) )
+        {
+            foreach ( $response[ "sorder_no" ] as $sub_order )
+                $mfi_sub_order_ids[] = $sub_order;
+
+            $mfi_sub_order_ids = implode( " | ", $mfi_sub_order_ids );
+        }
+        else
+        {
+            $mfi_sub_order_ids = $response[ "sorder_no" ];
+        }
 
         $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_sent"    ], true               );
         $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_id"      ], $mfi_order_id      );
@@ -103,7 +112,7 @@ class MFI_Orders
             "Pedido enviado com sucesso!",
             "ID do pedido: #{$mfi_order_id}",
             "Número do pedido: #{$mfi_order_number}",
-            "IDs dos sub-pedidos: " . implode( " | ", $mfi_sub_order_ids )
+            "IDs dos sub-pedidos: {$mfi_sub_order_ids}"
         ] ) );
 
         $order->save();
