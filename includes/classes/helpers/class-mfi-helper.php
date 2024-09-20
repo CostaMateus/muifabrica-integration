@@ -211,7 +211,7 @@ class MFI_Helper
             "state"        => $order->get_shipping_state(),
             "house_number" => $number,
 
-            "paid"         => 0, // 0 - not paid | 1 - paid // TODO o que exatamente significa
+            "paid"         => 1,
             "pay_time"     => $order->get_date_created()->getTimestamp(),
             "pay_type"     => $order->get_payment_method(),
             "pay_token"    => $pay_token,
