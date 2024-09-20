@@ -90,10 +90,10 @@ class MFI_Orders
         $mfi_order_ids     = [];
         $mfi_order_sub_ids = [];
 
-        foreach ( $response as $order )
+        foreach ( $response as $mfi_order )
         {
-            $mfi_order_ids[]     = $order[ "oid"       ];
-            $mfi_order_sub_ids[] = $order[ "sorder_no" ];
+            $mfi_order_ids[]     = $mfi_order[ "oid"       ];
+            $mfi_order_sub_ids[] = $mfi_order[ "sorder_no" ];
         }
 
         $mfi_order_ids     = implode( " | ", $mfi_order_ids     );
