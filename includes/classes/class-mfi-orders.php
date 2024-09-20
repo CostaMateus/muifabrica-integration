@@ -87,32 +87,30 @@ class MFI_Orders
             return false;
         }
 
-        $mfi_order_id      = $response[ 0 ][ "oid"      ];
+        $mfi_order_ids     = [];
+        $mfi_order_sub_ids = [];
+
+        foreach ( $response as $order )
+        {
+            $mfi_order_ids[]     = $order[ "oid"       ];
+            $mfi_order_sub_ids[] = $order[ "sorder_no" ];
+        }
+
+        $mfi_order_ids     = implode( " | ", $mfi_order_ids     );
+        $mfi_order_sub_ids = implode( " | ", $mfi_order_sub_ids );
+
         $mfi_order_number  = $response[ 0 ][ "order_id" ];
-        $mfi_sub_order_ids = [];
-
-        if ( is_array( $response[ "sorder_no" ] ) )
-        {
-            foreach ( $response[ "sorder_no" ] as $sub_order )
-                $mfi_sub_order_ids[] = $sub_order;
-
-            $mfi_sub_order_ids = implode( " | ", $mfi_sub_order_ids );
-        }
-        else
-        {
-            $mfi_sub_order_ids = $response[ "sorder_no" ];
-        }
 
         $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_sent"    ], true               );
-        $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_id"      ], $mfi_order_id      );
         $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_number"  ], $mfi_order_number  );
-        $order->add_meta_data( \Muifabrica_Integration::METAS[ "sub_order_ids" ], $mfi_sub_order_ids );
+        $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_ids"     ], $mfi_order_ids     );
+        $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_sub_ids" ], $mfi_order_sub_ids );
 
         $order->add_order_note( implode( "\n", [
             "Pedido enviado com sucesso!",
-            "ID do pedido: #{$mfi_order_id}",
-            "Número do pedido: #{$mfi_order_number}",
-            "IDs dos sub-pedidos: {$mfi_sub_order_ids}"
+            "Nº do pedido: #{$mfi_order_number}",
+            "IDs do pedido: #{$mfi_order_id}",
+            "Sub IDs do pedido: {$mfi_order_sub_ids}"
         ] ) );
 
         $order->save();
@@ -263,24 +261,27 @@ class MFI_Orders
         // Cancel order with MFI API
         if ( !$cancelled && $old_status != "completed" && $new_status == "cancelled" )
         {
-            $data         = MFI_Helper::translate_order( $order, true );
+            $data          = MFI_Helper::translate_order( $order, true );
 
-            $api          = new Muifabrica_Api();
+            $api           = new Muifabrica_Api();
 
-            $mfi_order_id = $order->get_meta( \Muifabrica_Integration::METAS[ "order_id" ] );
+            $mfi_order_ids = $order->get_meta( \Muifabrica_Integration::METAS[ "order_ids" ] );
+            $mfi_order_ids = explode( " | ", $mfi_order_ids );
 
-            $response     = $api->cancel_order( $data, $mfi_order_id );
-
-            if ( !$response )
+            foreach ( $mfi_order_ids as $mfi_order_id )
             {
-                $order->add_order_note( implode( "\n", [
-                    "Falha ao cancelar pedido com a Muifabrica!",
-                    "Erro: " . $api->get_error_message()
-                ] ) );
+                $response = $api->cancel_order( $data, $mfi_order_id );
 
-                $order->save();
+                if ( !$response )
+                {
+                    $order->add_order_note( implode( "\n", [
+                        "Falha ao cancelar pedido com a Muifabrica!",
+                        "ID do pedido: #{$mfi_order_id}",
+                        "Erro: " . $api->get_error_message(),
+                    ] ) );
 
-                return;
+                    $order->save();
+                }
             }
 
             $order->add_meta_data( \Muifabrica_Integration::METAS[ "order_cancelled" ], true );
