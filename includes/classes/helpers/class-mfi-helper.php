@@ -216,7 +216,7 @@ class MFI_Helper
             "pay_type"     => $order->get_payment_method(),
             "pay_token"    => $pay_token,
 
-            "uid"          => $order->get_customer_id(),
+            "uid"          => $order->get_customer_id() ?? 1,
             "personcode"   => $order->get_meta( "_billing_cpf" ),
             "tariff"       => $tariff,
             "icms"         => $icms,
